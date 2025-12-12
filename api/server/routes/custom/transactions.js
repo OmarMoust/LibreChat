@@ -120,14 +120,20 @@ router.get('/summary', requireJwtAuth, async (req, res) => {
 
     // Build filter - try both string and ObjectId for user field
     const userObjectId = toObjectId(userId);
-    const userFilter = { $or: [{ user: userId }, { user: userObjectId }] };
-    const filter = startDate 
-      ? { ...userFilter, createdAt: { $gte: startDate } }
-      : userFilter;
+    
+    // Build match stage for aggregation
+    const matchStage = startDate
+      ? {
+          $and: [
+            { $or: [{ user: userId }, { user: userObjectId }] },
+            { createdAt: { $gte: startDate } },
+          ],
+        }
+      : { $or: [{ user: userId }, { user: userObjectId }] };
 
     // Aggregate statistics
     const aggregation = await Transaction.aggregate([
-      { $match: filter },
+      { $match: matchStage },
       {
         $group: {
           _id: null,
