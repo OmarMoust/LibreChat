@@ -1551,6 +1551,10 @@ export enum SettingsTabValues {
    * Tab for Personalization Settings
    */
   PERSONALIZATION = 'personalization',
+  /**
+   * Tab for Usage/Token Statistics (Custom)
+   */
+  USAGE = 'usage',
 }
 
 export enum STTProviders {
