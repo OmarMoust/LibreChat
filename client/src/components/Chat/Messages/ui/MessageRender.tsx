@@ -229,9 +229,8 @@ const MessageRender = memo(
               <>
                 <StreamingStats
                   text={msg.text || ''}
-                  isSubmitting={effectiveIsSubmitting}
+                  isSubmitting={isSubmitting}
                   isLatestMessage={isLatestMessage}
-                  isFinished={!effectiveIsSubmitting && !!msg.text}
                 />
                 <MessageTokens
                   message={msg}

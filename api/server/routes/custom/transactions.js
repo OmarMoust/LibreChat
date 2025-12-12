@@ -3,10 +3,21 @@
  * This is a custom addition isolated from core LibreChat code for easier upstream merges
  */
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const { requireJwtAuth } = require('../../middleware/');
 const { Transaction } = require('~/db/models');
 const { logger } = require('@librechat/data-schemas');
+
+/**
+ * Helper to convert user ID to ObjectId if needed
+ */
+function toObjectId(id) {
+  if (mongoose.Types.ObjectId.isValid(id)) {
+    return new mongoose.Types.ObjectId(id);
+  }
+  return id;
+}
 
 /**
  * GET /api/user/transactions
@@ -31,8 +42,9 @@ router.get('/', requireJwtAuth, async (req, res) => {
       conversationId,
     } = req.query;
 
-    // Build filter
-    const filter = { user: userId };
+    // Build filter - try both string and ObjectId for user field
+    const userObjectId = toObjectId(userId);
+    const filter = { $or: [{ user: userId }, { user: userObjectId }] };
 
     if (startDate || endDate) {
       filter.createdAt = {};
@@ -106,10 +118,12 @@ router.get('/summary', requireJwtAuth, async (req, res) => {
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
-    const filter = { user: userId };
-    if (startDate) {
-      filter.createdAt = { $gte: startDate };
-    }
+    // Build filter - try both string and ObjectId for user field
+    const userObjectId = toObjectId(userId);
+    const userFilter = { $or: [{ user: userId }, { user: userObjectId }] };
+    const filter = startDate 
+      ? { ...userFilter, createdAt: { $gte: startDate } }
+      : userFilter;
 
     // Aggregate statistics
     const aggregation = await Transaction.aggregate([
