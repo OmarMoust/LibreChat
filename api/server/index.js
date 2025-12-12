@@ -198,6 +198,7 @@ const startServer = async () => {
 
   app.use('/api/tags', routes.tags);
   app.use('/api/mcp', routes.mcp);
+  app.use('/api/user', routes.custom);
 
   /** 404 for unmatched API routes */
   app.use('/api', apiNotFound);

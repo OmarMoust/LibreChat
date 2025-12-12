@@ -10,9 +10,10 @@ import PlaceholderRow from '~/components/Chat/Messages/ui/PlaceholderRow';
 import SiblingSwitch from '~/components/Chat/Messages/SiblingSwitch';
 import HoverButtons from '~/components/Chat/Messages/HoverButtons';
 import MessageIcon from '~/components/Chat/Messages/MessageIcon';
+import { MessageTokens, StreamingStats } from '~/components/Chat/Messages/custom';
 import SubRow from '~/components/Chat/Messages/SubRow';
 import { fontSizeAtom } from '~/store/fontSize';
-import { MessageContext } from '~/Providers';
+import { MessageContext, useMessagesViewContext } from '~/Providers';
 import store from '~/store';
 
 type MessageRenderProps = {
@@ -118,6 +119,8 @@ const MessageRender = memo(function MessageRender({
   });
   const fontSize = useAtomValue(fontSizeAtom);
   const maximizeChatSpace = useRecoilValue(store.maximizeChatSpace);
+  const { getMessages } = useMessagesViewContext();
+  const allMessages = useMemo(() => getMessages?.() || [], [getMessages]);
 
   const handleRegenerateMessage = useCallback(() => regenerateMessage(), [regenerateMessage]);
   const hasNoChildren = !(msg?.children?.length ?? 0);
@@ -258,6 +261,21 @@ const MessageRender = memo(function MessageRender({
                 isLast={isLast}
               />
             </SubRow>
+          )}
+          {!msg.isCreatedByUser && (
+            <>
+              <StreamingStats
+                text={msg.text || ''}
+                isSubmitting={isSubmitting}
+                isLatestMessage={isLatestMessage}
+                isFinished={!isSubmitting && !!msg.text}
+              />
+              <MessageTokens
+                message={msg}
+                messages={allMessages}
+                isCreatedByUser={msg.isCreatedByUser}
+              />
+            </>
           )}
         </div>
       </div>
