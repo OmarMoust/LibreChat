@@ -156,7 +156,7 @@ router.get('/summary', requireJwtAuth, async (req, res) => {
 
     // Get per-model breakdown
     const modelBreakdown = await Transaction.aggregate([
-      { $match: filter },
+      { $match: matchStage },
       {
         $group: {
           _id: '$model',
@@ -171,7 +171,7 @@ router.get('/summary', requireJwtAuth, async (req, res) => {
 
     // Get daily usage for chart
     const dailyUsage = await Transaction.aggregate([
-      { $match: filter },
+      { $match: matchStage },
       {
         $group: {
           _id: {
