@@ -268,7 +268,6 @@ const MessageRender = memo(function MessageRender({
                 text={msg.text || ''}
                 isSubmitting={isSubmitting}
                 isLatestMessage={isLatestMessage}
-                isFinished={!isSubmitting && !!msg.text}
               />
               <MessageTokens
                 message={msg}

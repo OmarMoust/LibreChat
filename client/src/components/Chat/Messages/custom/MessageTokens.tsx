@@ -6,10 +6,13 @@
  * - Single message tokens: tokens for this specific message
  * - Cumulative tokens: total tokens in conversation up to this message
  */
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Coins } from 'lucide-react';
 import type { TMessage } from 'librechat-data-provider';
 import { useLocalize } from '~/hooks';
+
+// Storage key for token display preference (must match Usage.tsx)
+const TOKEN_DISPLAY_KEY = 'librechat_show_message_tokens';
 
 interface MessageTokensProps {
   message: TMessage;
@@ -66,6 +69,26 @@ function flattenMessages(messages: TMessage[]): TMessage[] {
 
 export default function MessageTokens({ message, messages, isCreatedByUser }: MessageTokensProps) {
   const localize = useLocalize();
+  
+  // Check if token display is enabled
+  const [showTokens, setShowTokens] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(TOKEN_DISPLAY_KEY) !== 'false';
+    }
+    return true;
+  });
+
+  // Listen for toggle changes from Usage settings
+  useEffect(() => {
+    const handleChange = (e: CustomEvent<boolean>) => {
+      setShowTokens(e.detail);
+    };
+    
+    window.addEventListener('tokenDisplayChange', handleChange as EventListener);
+    return () => {
+      window.removeEventListener('tokenDisplayChange', handleChange as EventListener);
+    };
+  }, []);
 
   const messageTokens = message.tokenCount || 0;
 
@@ -76,8 +99,8 @@ export default function MessageTokens({ message, messages, isCreatedByUser }: Me
     return calculateCumulativeTokens(messages, message.messageId);
   }, [messages, message.messageId, messageTokens]);
 
-  // Don't show if no token data
-  if (!messageTokens && !cumulativeTokens) {
+  // Don't show if disabled or no token data
+  if (!showTokens || (!messageTokens && !cumulativeTokens)) {
     return null;
   }
 
@@ -102,4 +125,3 @@ export default function MessageTokens({ message, messages, isCreatedByUser }: Me
     </div>
   );
 }
-

@@ -4,11 +4,14 @@
  *
  * Shows:
  * - Live tokens/sec while streaming
- * - Final tokens/sec stat after completion
+ * - Final tokens/sec stat after completion (persisted)
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Zap } from 'lucide-react';
 import { useLocalize } from '~/hooks';
+
+// Storage key for token display preference (must match Usage.tsx)
+const TOKEN_DISPLAY_KEY = 'librechat_show_message_tokens';
 
 interface StreamingStatsProps {
   /** The current text content being streamed */
@@ -17,8 +20,6 @@ interface StreamingStatsProps {
   isSubmitting: boolean;
   /** Whether this is the latest message */
   isLatestMessage: boolean;
-  /** Whether the message is finished */
-  isFinished: boolean;
 }
 
 /**
@@ -36,18 +37,37 @@ export default function StreamingStats({
   text,
   isSubmitting,
   isLatestMessage,
-  isFinished,
 }: StreamingStatsProps) {
   const localize = useLocalize();
   const [tokensPerSecond, setTokensPerSecond] = useState<number>(0);
-  const [finalStats, setFinalStats] = useState<{ tps: number; totalTokens: number } | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
+  const [finalStats, setFinalStats] = useState<{ tps: number; totalTokens: number; duration: number } | null>(null);
+  const [hasStartedStreaming, setHasStartedStreaming] = useState(false);
+  
+  // Check if token display is enabled
+  const [showTokens, setShowTokens] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(TOKEN_DISPLAY_KEY) !== 'false';
+    }
+    return true;
+  });
+
+  // Listen for toggle changes from Usage settings
+  useEffect(() => {
+    const handleChange = (e: CustomEvent<boolean>) => {
+      setShowTokens(e.detail);
+    };
+    
+    window.addEventListener('tokenDisplayChange', handleChange as EventListener);
+    return () => {
+      window.removeEventListener('tokenDisplayChange', handleChange as EventListener);
+    };
+  }, []);
 
   // Refs for tracking
   const startTimeRef = useRef<number | null>(null);
-  const lastTokenCountRef = useRef<number>(0);
-  const lastUpdateTimeRef = useRef<number>(0);
+  const prevTextLengthRef = useRef<number>(0);
   const tokenHistoryRef = useRef<Array<{ time: number; tokens: number }>>([]);
+  const wasSubmittingRef = useRef<boolean>(false);
 
   // Calculate rolling average tokens per second
   const calculateTps = useCallback(() => {
@@ -75,61 +95,60 @@ export default function StreamingStats({
     return Math.round(tokenDiff / timeDiff);
   }, [text]);
 
-  // Start tracking when streaming begins
+  // Detect streaming start
   useEffect(() => {
-    if (isSubmitting && isLatestMessage && !isFinished) {
-      if (!startTimeRef.current) {
+    if (isSubmitting && isLatestMessage && text.length > prevTextLengthRef.current) {
+      if (!hasStartedStreaming) {
+        setHasStartedStreaming(true);
         startTimeRef.current = Date.now();
-        lastTokenCountRef.current = 0;
         tokenHistoryRef.current = [];
         setFinalStats(null);
       }
-      setIsStreaming(true);
     }
-  }, [isSubmitting, isLatestMessage, isFinished]);
+    prevTextLengthRef.current = text.length;
+  }, [isSubmitting, isLatestMessage, text, hasStartedStreaming]);
 
   // Update TPS during streaming
   useEffect(() => {
-    if (!isStreaming || isFinished) return;
+    if (!hasStartedStreaming || !isSubmitting) return;
 
     const interval = setInterval(() => {
       const tps = calculateTps();
       setTokensPerSecond(tps);
-    }, 200); // Update every 200ms for smooth display
+    }, 200);
 
     return () => clearInterval(interval);
-  }, [isStreaming, isFinished, calculateTps]);
+  }, [hasStartedStreaming, isSubmitting, calculateTps]);
 
   // Handle streaming completion
   useEffect(() => {
-    if (isStreaming && (isFinished || (!isSubmitting && text))) {
+    // Detect when submitting stops (was submitting, now not)
+    if (wasSubmittingRef.current && !isSubmitting && hasStartedStreaming && text) {
       const endTime = Date.now();
-      const totalTime = startTimeRef.current ? (endTime - startTimeRef.current) / 1000 : 0;
+      const duration = startTimeRef.current ? (endTime - startTimeRef.current) / 1000 : 0;
       const totalTokens = estimateTokens(text);
 
-      if (totalTime > 0 && totalTokens > 0) {
-        const avgTps = Math.round(totalTokens / totalTime);
-        setFinalStats({ tps: avgTps, totalTokens });
+      if (duration > 0.5 && totalTokens > 0) {
+        const avgTps = Math.round(totalTokens / duration);
+        setFinalStats({ tps: avgTps, totalTokens, duration });
       }
 
-      setIsStreaming(false);
-      startTimeRef.current = null;
-      tokenHistoryRef.current = [];
-    }
-  }, [isFinished, isSubmitting, text, isStreaming]);
-
-  // Reset when message changes
-  useEffect(() => {
-    if (!isLatestMessage) {
-      setIsStreaming(false);
+      setHasStartedStreaming(false);
       setTokensPerSecond(0);
       startTimeRef.current = null;
       tokenHistoryRef.current = [];
     }
-  }, [isLatestMessage]);
+    
+    wasSubmittingRef.current = isSubmitting;
+  }, [isSubmitting, hasStartedStreaming, text]);
+
+  // Don't show if disabled
+  if (!showTokens) {
+    return null;
+  }
 
   // Show live stats during streaming
-  if (isStreaming && tokensPerSecond > 0) {
+  if (hasStartedStreaming && isSubmitting && tokensPerSecond > 0) {
     return (
       <div className="mt-1 flex items-center gap-1.5 text-[10px] text-green-600 dark:text-green-400">
         <Zap className="h-3 w-3 animate-pulse" />
@@ -140,14 +159,14 @@ export default function StreamingStats({
     );
   }
 
-  // Show final stats after completion
-  if (finalStats && !isStreaming) {
+  // Show final stats after completion (only for latest message)
+  if (finalStats && isLatestMessage && !isSubmitting) {
     return (
       <div className="mt-1 flex items-center gap-1.5 text-[10px] text-text-tertiary">
         <Zap className="h-3 w-3" />
         <span>
           ~{finalStats.totalTokens.toLocaleString()} {localize('com_ui_tokens')} @ {finalStats.tps}{' '}
-          {localize('com_ui_tokens_per_second')}
+          {localize('com_ui_tokens_per_second')} ({finalStats.duration.toFixed(1)}s)
         </span>
       </div>
     );
@@ -155,4 +174,3 @@ export default function StreamingStats({
 
   return null;
 }
-
