@@ -10,7 +10,6 @@ import {
   TrendingUp,
   ChevronDown,
   ChevronUp,
-  DollarSign,
   Eye,
   EyeOff,
 } from 'lucide-react';
@@ -280,13 +279,6 @@ export default function Usage() {
     [transactionsData?.transactions],
   );
 
-  // Format cost as currency
-  const formatCost = (cost: number) => {
-    if (cost === 0) return '$0.00';
-    if (cost < 0.01) return `$${cost.toFixed(6)}`;
-    return `$${cost.toFixed(4)}`;
-  };
-
   return (
     <div className="flex flex-col gap-3 text-sm text-text-primary">
       {/* Header with period selector */}
@@ -306,16 +298,11 @@ export default function Usage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <StatCard
               icon={<Coins className="h-3.5 w-3.5" />}
               label={localize('com_ui_usage_total_tokens')}
               value={summary?.totalTokens || 0}
-            />
-            <StatCard
-              icon={<DollarSign className="h-3.5 w-3.5" />}
-              label={localize('com_ui_usage_cost')}
-              value={formatCost(summary?.totalCost || 0)}
             />
             <StatCard
               icon={<TrendingUp className="h-3.5 w-3.5" />}

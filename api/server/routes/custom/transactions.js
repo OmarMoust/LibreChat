@@ -132,16 +132,45 @@ router.get('/summary', requireJwtAuth, async (req, res) => {
       : { $or: [{ user: userId }, { user: userObjectId }] };
 
     // Aggregate statistics
+    // Note: rawAmount is stored as NEGATIVE values
+    // For prompts with caching: use inputTokens + writeTokens + readTokens
+    // tokenValue is internal credits, NOT actual dollar cost
     const aggregation = await Transaction.aggregate([
       { $match: matchStage },
       {
         $group: {
           _id: null,
-          totalTokens: { $sum: { $abs: '$rawAmount' } },
-          totalCost: { $sum: { $abs: '$tokenValue' } },
+          // For prompt tokens: prefer structured tokens if available, otherwise use rawAmount
           promptTokens: {
             $sum: {
-              $cond: [{ $eq: ['$tokenType', 'prompt'] }, { $abs: '$rawAmount' }, 0],
+              $cond: [
+                { $eq: ['$tokenType', 'prompt'] },
+                {
+                  $add: [
+                    { $abs: { $ifNull: ['$inputTokens', 0] } },
+                    { $abs: { $ifNull: ['$writeTokens', 0] } },
+                    { $abs: { $ifNull: ['$readTokens', 0] } },
+                  ],
+                },
+                0,
+              ],
+            },
+          },
+          // Fallback for prompts without structured tokens
+          promptTokensRaw: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ['$tokenType', 'prompt'] },
+                    { $eq: [{ $ifNull: ['$inputTokens', 0] }, 0] },
+                    { $eq: [{ $ifNull: ['$writeTokens', 0] }, 0] },
+                    { $eq: [{ $ifNull: ['$readTokens', 0] }, 0] },
+                  ],
+                },
+                { $abs: '$rawAmount' },
+                0,
+              ],
             },
           },
           completionTokens: {
@@ -160,8 +189,41 @@ router.get('/summary', requireJwtAuth, async (req, res) => {
       {
         $group: {
           _id: '$model',
-          tokens: { $sum: { $abs: '$rawAmount' } },
-          cost: { $sum: { $abs: '$tokenValue' } },
+          // Calculate tokens properly based on type
+          tokens: {
+            $sum: {
+              $cond: [
+                { $eq: ['$tokenType', 'prompt'] },
+                // For prompts: use structured tokens if available
+                {
+                  $cond: [
+                    {
+                      $gt: [
+                        {
+                          $add: [
+                            { $abs: { $ifNull: ['$inputTokens', 0] } },
+                            { $abs: { $ifNull: ['$writeTokens', 0] } },
+                            { $abs: { $ifNull: ['$readTokens', 0] } },
+                          ],
+                        },
+                        0,
+                      ],
+                    },
+                    {
+                      $add: [
+                        { $abs: { $ifNull: ['$inputTokens', 0] } },
+                        { $abs: { $ifNull: ['$writeTokens', 0] } },
+                        { $abs: { $ifNull: ['$readTokens', 0] } },
+                      ],
+                    },
+                    { $abs: '$rawAmount' },
+                  ],
+                },
+                // For completions: use rawAmount
+                { $abs: '$rawAmount' },
+              ],
+            },
+          },
           count: { $sum: 1 },
         },
       },
@@ -184,12 +246,25 @@ router.get('/summary', requireJwtAuth, async (req, res) => {
       { $sort: { _id: 1 } },
     ]);
 
-    const summary = aggregation[0] || {
-      totalTokens: 0,
-      totalCost: 0,
+    const rawSummary = aggregation[0] || {
       promptTokens: 0,
+      promptTokensRaw: 0,
       completionTokens: 0,
       transactionCount: 0,
+    };
+
+    // Use structured prompt tokens, or fall back to raw if no structured data
+    const promptTokens = rawSummary.promptTokens > 0 ? rawSummary.promptTokens : rawSummary.promptTokensRaw;
+    const completionTokens = rawSummary.completionTokens;
+    const totalTokens = promptTokens + completionTokens;
+
+    // Note: We don't calculate cost here because tokenValue is internal credits, not dollars
+    // Real cost would require knowing actual API pricing per model
+    const summary = {
+      totalTokens,
+      promptTokens,
+      completionTokens,
+      transactionCount: rawSummary.transactionCount,
     };
 
     res.status(200).json({
