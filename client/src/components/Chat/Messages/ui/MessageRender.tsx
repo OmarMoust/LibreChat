@@ -260,21 +260,21 @@ const MessageRender = memo(function MessageRender({
                 handleFeedback={handleFeedback}
                 isLast={isLast}
               />
+              {!msg.isCreatedByUser && (
+                <>
+                  <StreamingStats
+                    text={msg.text || ''}
+                    isSubmitting={isSubmitting}
+                    isLatestMessage={isLatestMessage}
+                  />
+                  <MessageTokens
+                    message={msg}
+                    messages={allMessages}
+                    isCreatedByUser={msg.isCreatedByUser}
+                  />
+                </>
+              )}
             </SubRow>
-          )}
-          {!msg.isCreatedByUser && (
-            <>
-              <StreamingStats
-                text={msg.text || ''}
-                isSubmitting={isSubmitting}
-                isLatestMessage={isLatestMessage}
-              />
-              <MessageTokens
-                message={msg}
-                messages={allMessages}
-                isCreatedByUser={msg.isCreatedByUser}
-              />
-            </>
           )}
         </div>
       </div>

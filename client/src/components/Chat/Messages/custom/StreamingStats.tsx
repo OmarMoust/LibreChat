@@ -150,10 +150,10 @@ export default function StreamingStats({
   // Show live stats during streaming
   if (hasStartedStreaming && isSubmitting && tokensPerSecond > 0) {
     return (
-      <div className="mt-1 flex items-center gap-1.5 text-[10px] text-green-600 dark:text-green-400">
+      <div className="flex items-center gap-1 text-[10px] text-green-600 dark:text-green-400">
         <Zap className="h-3 w-3 animate-pulse" />
         <span className="font-medium">
-          {tokensPerSecond} {localize('com_ui_tokens_per_second')}
+          {tokensPerSecond} tok/s
         </span>
       </div>
     );
@@ -162,11 +162,10 @@ export default function StreamingStats({
   // Show final stats after completion (only for latest message)
   if (finalStats && isLatestMessage && !isSubmitting) {
     return (
-      <div className="mt-1 flex items-center gap-1.5 text-[10px] text-text-tertiary">
+      <div className="flex items-center gap-1 text-[10px] text-text-tertiary">
         <Zap className="h-3 w-3" />
         <span>
-          ~{finalStats.totalTokens.toLocaleString()} {localize('com_ui_tokens')} @ {finalStats.tps}{' '}
-          {localize('com_ui_tokens_per_second')} ({finalStats.duration.toFixed(1)}s)
+          {finalStats.tps} tok/s
         </span>
       </div>
     );
