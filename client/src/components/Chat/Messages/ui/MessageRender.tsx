@@ -222,22 +222,21 @@ const MessageRender = memo(
                   handleFeedback={handleFeedback}
                   isLast={isLast}
                 />
+                {/* Custom token display - inline with hover buttons */}
+                {!msg.isCreatedByUser && (
+                  <>
+                    <StreamingStats
+                      text={msg.text || ''}
+                      isSubmitting={isSubmitting}
+                      isLatestMessage={isLatestMessage}
+                    />
+                    <MessageTokens
+                      message={msg}
+                      messages={allMessages}
+                    />
+                  </>
+                )}
               </SubRow>
-            )}
-            {/* Custom token display components */}
-            {!msg.isCreatedByUser && (
-              <>
-                <StreamingStats
-                  text={msg.text || ''}
-                  isSubmitting={isSubmitting}
-                  isLatestMessage={isLatestMessage}
-                />
-                <MessageTokens
-                  message={msg}
-                  messages={allMessages}
-                  isCreatedByUser={msg.isCreatedByUser}
-                />
-              </>
             )}
           </div>
         </div>

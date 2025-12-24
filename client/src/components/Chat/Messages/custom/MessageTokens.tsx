@@ -17,7 +17,6 @@ const TOKEN_DISPLAY_KEY = 'librechat_show_message_tokens';
 interface MessageTokensProps {
   message: TMessage;
   messages?: TMessage[];
-  isCreatedByUser?: boolean;
 }
 
 /**
@@ -67,7 +66,7 @@ function flattenMessages(messages: TMessage[]): TMessage[] {
   return result;
 }
 
-export default function MessageTokens({ message, messages, isCreatedByUser }: MessageTokensProps) {
+export default function MessageTokens({ message, messages }: MessageTokensProps) {
   const localize = useLocalize();
   
   // Check if token display is enabled
@@ -105,22 +104,16 @@ export default function MessageTokens({ message, messages, isCreatedByUser }: Me
   }
 
   return (
-    <div
-      className={`mt-1 flex items-center gap-1.5 text-[10px] text-text-tertiary ${
-        isCreatedByUser ? 'justify-end' : 'justify-start'
-      }`}
-    >
+    <div className="flex items-center gap-1 text-[10px] text-text-tertiary">
       <Coins className="h-3 w-3" />
       <span>
         {messageTokens > 0 && (
           <>
             <span className="font-medium">{messageTokens.toLocaleString()}</span>
-            <span className="mx-1 opacity-50">|</span>
+            <span className="mx-0.5 opacity-50">/</span>
           </>
         )}
-        <span>
-          {localize('com_ui_tokens_total')}: {cumulativeTokens.toLocaleString()}
-        </span>
+        <span>{cumulativeTokens.toLocaleString()}</span>
       </span>
     </div>
   );
