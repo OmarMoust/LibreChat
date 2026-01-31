@@ -192,7 +192,9 @@ module.exports = {
         filters.push({ conversationId: { $in: matchingIds } });
       } catch (error) {
         logger.error('[getConvosByCursor] Error during meiliSearch', error);
-        throw new Error('Error during meiliSearch');
+        // Return empty results instead of throwing - allows graceful degradation
+        // when Meilisearch is temporarily unavailable
+        return { conversations: [], nextCursor: null };
       }
     }
 
