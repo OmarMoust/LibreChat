@@ -1,51 +1,24 @@
 const passport = require('passport');
 const session = require('express-session');
-const { isEnabled } = require('@librechat/api');
 const { CacheKeys } = require('librechat-data-provider');
+const { isEnabled, shouldUseSecureCookie } = require('@librechat/api');
 const { logger, DEFAULT_SESSION_EXPIRY } = require('@librechat/data-schemas');
 const {
   openIdJwtLogin,
   facebookLogin,
+  facebookAdminLogin,
   discordLogin,
+  discordAdminLogin,
   setupOpenId,
   googleLogin,
+  googleAdminLogin,
   githubLogin,
+  githubAdminLogin,
   appleLogin,
+  appleAdminLogin,
   setupSaml,
 } = require('~/strategies');
 const { getLogStores } = require('~/cache');
-
-/**
- * Determines if secure cookies should be used.
- * Only use secure cookies in production when not on localhost.
- * @returns {boolean}
- */
-function shouldUseSecureCookie() {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const domainServer = process.env.DOMAIN_SERVER || '';
-
-  let hostname = '';
-  if (domainServer) {
-    try {
-      const normalized = /^https?:\/\//i.test(domainServer)
-        ? domainServer
-        : `http://${domainServer}`;
-      const url = new URL(normalized);
-      hostname = (url.hostname || '').toLowerCase();
-    } catch {
-      // Fallback: treat DOMAIN_SERVER directly as a hostname-like string
-      hostname = domainServer.toLowerCase();
-    }
-  }
-
-  const isLocalhost =
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname === '::1' ||
-    hostname.endsWith('.localhost');
-
-  return isProduction && !isLocalhost;
-}
 
 /**
  * Configures OpenID Connect for the application.
@@ -90,18 +63,23 @@ const configureSocialLogins = async (app) => {
 
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     passport.use(googleLogin());
+    passport.use('googleAdmin', googleAdminLogin());
   }
   if (process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET) {
     passport.use(facebookLogin());
+    passport.use('facebookAdmin', facebookAdminLogin());
   }
   if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
     passport.use(githubLogin());
+    passport.use('githubAdmin', githubAdminLogin());
   }
   if (process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET) {
     passport.use(discordLogin());
+    passport.use('discordAdmin', discordAdminLogin());
   }
   if (process.env.APPLE_CLIENT_ID && process.env.APPLE_PRIVATE_KEY_PATH) {
     passport.use(appleLogin());
+    passport.use('appleAdmin', appleAdminLogin());
   }
   if (
     process.env.OPENID_CLIENT_ID &&
