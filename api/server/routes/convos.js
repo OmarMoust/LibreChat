@@ -253,6 +253,38 @@ function handleUpload(req, res, next) {
 }
 
 /**
+ * Imports a single LibreChat conversation from a JSON file and saves it to the database.
+ * Rejects bulk exports (arrays) and non-LibreChat formats.
+ * @route POST /import/single
+ * @param {Express.Multer.File} req.file - The JSON file to import.
+ * @returns {object} 201 - success response - application/json
+ */
+router.post(
+  '/import/single',
+  importIpLimiter,
+  importUserLimiter,
+  configMiddleware,
+  handleUpload,
+  async (req, res) => {
+    try {
+      await importConversations({
+        filepath: req.file.path,
+        requestUserId: req.user.id,
+        userRole: req.user.role,
+        singleOnly: true,
+      });
+      res.status(201).json({ message: 'Conversation imported successfully' });
+    } catch (error) {
+      logger.error('Error processing single conversation import file', error);
+      if (error?.message?.includes('Unsupported import type')) {
+        return res.status(400).send(error.message);
+      }
+      res.status(500).send('Error processing file');
+    }
+  },
+);
+
+/**
  * Imports a conversation from a JSON file and saves it to the database.
  * @route POST /import
  * @param {Express.Multer.File} req.file - The JSON file to import.

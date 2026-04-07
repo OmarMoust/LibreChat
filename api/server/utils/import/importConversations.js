@@ -7,10 +7,10 @@ const maxFileSize = resolveImportMaxFileSize();
 
 /**
  * Job definition for importing a conversation.
- * @param {{ filepath: string, requestUserId: string, userRole?: string }} job
+ * @param {{ filepath: string, requestUserId: string, userRole?: string, singleOnly?: boolean }} job
  */
 const importConversations = async (job) => {
-  const { filepath, requestUserId, userRole } = job;
+  const { filepath, requestUserId, userRole, singleOnly = false } = job;
   try {
     logger.debug(`user: ${requestUserId} | Importing conversation(s) from file...`);
 
@@ -23,6 +23,14 @@ const importConversations = async (job) => {
 
     const fileData = await fs.readFile(filepath, 'utf8');
     const jsonData = JSON.parse(fileData);
+    if (
+      singleOnly &&
+      (Array.isArray(jsonData) ||
+        !jsonData?.conversationId ||
+        (!jsonData?.messages && !jsonData?.messagesTree))
+    ) {
+      throw new Error('Unsupported import type: expected a single LibreChat conversation JSON');
+    }
     const importer = getImporter(jsonData);
     await importer(jsonData, requestUserId, undefined, userRole);
     logger.debug(`user: ${requestUserId} | Finished importing conversations`);

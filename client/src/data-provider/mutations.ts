@@ -636,6 +636,29 @@ export const useUploadConversationsMutation = (
   });
 };
 
+export const useUploadSingleConversationMutation = (
+  _options?: t.MutationOptions<t.TImportResponse, FormData>,
+) => {
+  const queryClient = useQueryClient();
+  const { onSuccess, onError, onMutate } = _options || {};
+
+  return useMutation<t.TImportResponse, unknown, FormData>({
+    mutationFn: (formData: FormData) => dataService.importSingleConversationFile(formData),
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries([QueryKeys.allConversations]);
+      if (onSuccess) {
+        onSuccess(data, variables, context);
+      }
+    },
+    onError: (err, variables, context) => {
+      if (onError) {
+        onError(err, variables, context);
+      }
+    },
+    onMutate,
+  });
+};
+
 export const useUpdatePresetMutation = (
   options?: t.UpdatePresetOptions,
 ): UseMutationResult<

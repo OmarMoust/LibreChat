@@ -122,6 +122,8 @@ export const deleteAllConversation = () => `${conversationsRoot}/all`;
 
 export const importConversation = () => `${conversationsRoot}/import`;
 
+export const importSingleConversation = () => `${conversationsRoot}/import/single`;
+
 export const forkConversation = () => `${conversationsRoot}/fork`;
 
 export const duplicateConversation = () => `${conversationsRoot}/duplicate`;

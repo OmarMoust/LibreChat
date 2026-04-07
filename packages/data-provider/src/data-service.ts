@@ -630,6 +630,16 @@ export const importConversationsFile = (data: FormData): Promise<t.TImportRespon
   return request.postMultiPart(endpoints.importConversation(), data);
 };
 
+/**
+ * Imports a single LibreChat conversation file.
+ *
+ * @param data - The FormData containing the file to import.
+ * @returns A Promise that resolves to the import response.
+ */
+export const importSingleConversationFile = (data: FormData): Promise<t.TImportResponse> => {
+  return request.postMultiPart(endpoints.importSingleConversation(), data);
+};
+
 export const uploadAvatar = (data: FormData): Promise<f.AvatarUploadResponse> => {
   return request.postMultiPart(endpoints.avatar(), data);
 };
