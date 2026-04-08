@@ -3,6 +3,7 @@ import Cookies from 'js-cookie';
 import { useRecoilState } from 'recoil';
 import { Dropdown, ThemeContext } from '@librechat/client';
 import ArchivedChats from './ArchivedChats';
+import RecycleBin from './RecycleBin';
 import ToggleSwitch from '../ToggleSwitch';
 import { useLocalize } from '~/hooks';
 import store from '~/store';
@@ -191,6 +192,9 @@ function General() {
       ))}
       <div className="pb-3">
         <ArchivedChats />
+      </div>
+      <div className="pb-3">
+        <RecycleBin />
       </div>
     </div>
   );

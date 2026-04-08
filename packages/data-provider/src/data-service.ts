@@ -755,6 +755,12 @@ export function archiveConversation(
   return request.post(endpoints.archiveConversation(), { arg: payload });
 }
 
+export function restoreConversation(
+  payload: t.TRestoreConversationRequest,
+): Promise<t.TRestoreConversationResponse> {
+  return request.post(endpoints.restoreConversation(), { arg: payload });
+}
+
 export function genTitle(payload: m.TGenTitleRequest): Promise<m.TGenTitleResponse> {
   return request.get(endpoints.genTitle(payload.conversationId));
 }

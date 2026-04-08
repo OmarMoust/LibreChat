@@ -29,6 +29,7 @@ router.get('/', async (req, res) => {
   const limit = parseInt(req.query.limit, 10) || 25;
   const cursor = req.query.cursor;
   const isArchived = isEnabled(req.query.isArchived);
+  const isDeleted = isEnabled(req.query.isDeleted);
   const search = req.query.search ? decodeURIComponent(req.query.search) : undefined;
   const sortBy = req.query.sortBy || 'updatedAt';
   const sortDirection = req.query.sortDirection || 'desc';
@@ -43,6 +44,7 @@ router.get('/', async (req, res) => {
       cursor,
       limit,
       isArchived,
+      isDeleted,
       tags,
       search,
       sortBy,
@@ -96,7 +98,7 @@ router.get('/gen_title/:conversationId', async (req, res) => {
 
 router.delete('/', async (req, res) => {
   let filter = {};
-  const { conversationId, source, thread_id, endpoint } = req.body?.arg ?? {};
+  const { conversationId, source, thread_id, endpoint, permanent = false } = req.body?.arg ?? {};
 
   // Prevent deletion of all conversations
   if (!conversationId && !source && !thread_id && !endpoint) {
@@ -111,27 +113,41 @@ router.delete('/', async (req, res) => {
     return res.status(200).send('No conversationId provided');
   }
 
-  if (
-    typeof endpoint !== 'undefined' &&
-    Object.prototype.propertyIsEnumerable.call(assistantClients, endpoint)
-  ) {
-    /** @type {{ openai: OpenAI }} */
-    const { openai } = await assistantClients[endpoint].initializeClient({ req, res });
-    try {
-      const response = await openai.beta.threads.delete(thread_id);
-      logger.debug('Deleted OpenAI thread:', response);
-    } catch (error) {
-      logger.error('Error deleting OpenAI thread:', error);
-    }
-  }
-
   try {
-    const dbResponse = await db.deleteConvos(req.user.id, filter);
-    if (filter.conversationId) {
-      await db.deleteToolCalls(req.user.id, filter.conversationId);
-      await db.deleteConvoSharedLink(req.user.id, filter.conversationId);
+    if (permanent) {
+      if (
+        typeof endpoint !== 'undefined' &&
+        Object.prototype.propertyIsEnumerable.call(assistantClients, endpoint)
+      ) {
+        /** @type {{ openai: OpenAI }} */
+        const { openai } = await assistantClients[endpoint].initializeClient({ req, res });
+        try {
+          const response = await openai.beta.threads.delete(thread_id);
+          logger.debug('Deleted OpenAI thread:', response);
+        } catch (error) {
+          logger.error('Error deleting OpenAI thread:', error);
+        }
+      }
+
+      const dbResponse = await db.deleteConvos(req.user.id, filter);
+      if (filter.conversationId) {
+        await db.deleteToolCalls(req.user.id, filter.conversationId);
+        await db.deleteConvoSharedLink(req.user.id, filter.conversationId);
+      }
+      return res.status(201).json(dbResponse);
     }
-    res.status(201).json(dbResponse);
+
+    const deletedConvo = await db.saveConvo(
+      {
+        userId: req?.user?.id,
+        isTemporary: req?.body?.isTemporary,
+        interfaceConfig: req?.config?.interfaceConfig,
+      },
+      { conversationId, isDeleted: true },
+      { context: `DELETE /api/convos (soft-delete) ${conversationId}` },
+    );
+
+    res.status(200).json(deletedConvo);
   } catch (error) {
     logger.error('Error clearing conversations', error);
     res.status(500).send('Error clearing conversations');
@@ -147,6 +163,36 @@ router.delete('/all', async (req, res) => {
   } catch (error) {
     logger.error('Error clearing conversations', error);
     res.status(500).send('Error clearing conversations');
+  }
+});
+
+/**
+ * Restores a conversation from the recycle bin.
+ * @route POST /restore
+ * @param {string} req.body.arg.conversationId - The conversation ID to restore.
+ * @returns {object} 200 - The restored conversation object.
+ */
+router.post('/restore', validateConvoAccess, async (req, res) => {
+  const { conversationId } = req.body?.arg ?? {};
+
+  if (!conversationId) {
+    return res.status(400).json({ error: 'conversationId is required' });
+  }
+
+  try {
+    const dbResponse = await db.saveConvo(
+      {
+        userId: req?.user?.id,
+        isTemporary: req?.body?.isTemporary,
+        interfaceConfig: req?.config?.interfaceConfig,
+      },
+      { conversationId, isDeleted: false },
+      { context: `POST /api/convos/restore ${conversationId}` },
+    );
+    res.status(200).json(dbResponse);
+  } catch (error) {
+    logger.error('Error restoring conversation', error);
+    res.status(500).send('Error restoring conversation');
   }
 });
 

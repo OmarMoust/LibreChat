@@ -142,6 +142,70 @@ export const useArchiveConvoMutation = (
   );
 };
 
+export const useRestoreConvoMutation = (
+  options?: t.RestoreConversationOptions,
+): UseMutationResult<
+  t.TRestoreConversationResponse,
+  unknown,
+  t.TRestoreConversationRequest,
+  unknown
+> => {
+  const queryClient = useQueryClient();
+  const convoQueryKey = [QueryKeys.allConversations];
+  const deletedConvoQueryKey = [QueryKeys.deletedConversations];
+  const { onMutate, onError, onSuccess, ..._options } = options || {};
+
+  return useMutation(
+    (payload: t.TRestoreConversationRequest) => dataService.restoreConversation(payload),
+    {
+      onMutate,
+      onSuccess: (_data, vars, context) => {
+        const deletedQueries = queryClient
+          .getQueryCache()
+          .findAll([QueryKeys.deletedConversations], { exact: false });
+
+        for (const query of deletedQueries) {
+          queryClient.setQueryData<InfiniteData<ConversationListResponse>>(
+            query.queryKey,
+            (oldData) => {
+              if (!oldData) {
+                return oldData;
+              }
+              return {
+                ...oldData,
+                pages: oldData.pages.map((page) => ({
+                  ...page,
+                  conversations: page.conversations.filter(
+                    (conv) => conv.conversationId !== vars.conversationId,
+                  ),
+                })),
+              };
+            },
+          );
+        }
+
+        addConvoToAllQueries(queryClient, _data);
+
+        queryClient.setQueryData([QueryKeys.conversation, vars.conversationId], _data);
+
+        onSuccess?.(_data, vars, context);
+      },
+      onError,
+      onSettled: () => {
+        queryClient.invalidateQueries({
+          queryKey: convoQueryKey,
+          refetchPage: (_, index) => index === 0,
+        });
+        queryClient.invalidateQueries({
+          queryKey: deletedConvoQueryKey,
+          refetchPage: (_, index) => index === 0,
+        });
+      },
+      ..._options,
+    },
+  );
+};
+
 export const useCreateSharedLinkMutation = (
   options?: t.MutationOptions<
     t.TCreateShareLinkRequest,

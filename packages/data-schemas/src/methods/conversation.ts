@@ -25,6 +25,7 @@ export interface ConversationMethods {
       cursor?: string | null;
       limit?: number;
       isArchived?: boolean;
+      isDeleted?: boolean;
       tags?: string[];
       search?: string;
       sortBy?: string;
@@ -249,6 +250,7 @@ export function createConversationMethods(
       cursor,
       limit = 25,
       isArchived = false,
+      isDeleted = false,
       tags,
       search,
       sortBy = 'updatedAt',
@@ -257,6 +259,7 @@ export function createConversationMethods(
       cursor?: string | null;
       limit?: number;
       isArchived?: boolean;
+      isDeleted?: boolean;
       tags?: string[];
       search?: string;
       sortBy?: string;
@@ -265,9 +268,18 @@ export function createConversationMethods(
   ) {
     const Conversation = mongoose.models.Conversation as Model<IConversation>;
     const filters: FilterQuery<IConversation>[] = [{ user } as FilterQuery<IConversation>];
+
+    if (isDeleted) {
+      filters.push({ isDeleted: true } as FilterQuery<IConversation>);
+    } else {
+      filters.push({
+        $or: [{ isDeleted: false }, { isDeleted: { $exists: false } }],
+      } as FilterQuery<IConversation>);
+    }
+
     if (isArchived) {
       filters.push({ isArchived: true } as FilterQuery<IConversation>);
-    } else {
+    } else if (!isDeleted) {
       filters.push({
         $or: [{ isArchived: false }, { isArchived: { $exists: false } }],
       } as FilterQuery<IConversation>);

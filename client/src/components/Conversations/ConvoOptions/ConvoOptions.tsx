@@ -67,7 +67,7 @@ function ConvoOptions({
       }
       retainView();
       showToast({
-        message: localize('com_ui_convo_delete_success'),
+        message: localize('com_ui_convo_sent_to_recycle_bin'),
         severity: NotificationSeverity.SUCCESS,
         showIcon: true,
       });
@@ -126,7 +126,13 @@ function ConvoOptions({
       const messages = queryClient.getQueryData<TMessage[]>([QueryKeys.messages, convoId]);
       const thread_id = messages?.[messages.length - 1]?.thread_id;
       const endpoint = messages?.[messages.length - 1]?.endpoint;
-      deleteMutation.mutate({ conversationId: convoId, thread_id, endpoint, source: 'button' });
+      deleteMutation.mutate({
+        conversationId: convoId,
+        thread_id,
+        endpoint,
+        source: 'button',
+        permanent: false,
+      });
     },
     [conversationId, deleteMutation, queryClient],
   );

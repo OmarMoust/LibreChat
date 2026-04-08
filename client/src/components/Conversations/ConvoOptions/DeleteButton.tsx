@@ -58,7 +58,7 @@ export function DeleteConversationDialog({
       setMenuOpen?.(false);
       retainView();
       showToast({
-        message: localize('com_ui_convo_delete_success'),
+        message: localize('com_ui_convo_sent_to_recycle_bin'),
         severity: NotificationSeverity.SUCCESS,
         showIcon: true,
       });
@@ -77,7 +77,7 @@ export function DeleteConversationDialog({
     const thread_id = messages?.[messages.length - 1]?.thread_id;
     const endpoint = messages?.[messages.length - 1]?.endpoint;
 
-    deleteMutation.mutate({ conversationId, thread_id, endpoint, source: 'button' });
+    deleteMutation.mutate({ conversationId, thread_id, endpoint, source: 'button', permanent: false });
   }, [conversationId, deleteMutation, queryClient]);
 
   return (
@@ -87,11 +87,11 @@ export function DeleteConversationDialog({
       aria-describedby="delete-conversation-description"
     >
       <OGDialogHeader>
-        <OGDialogTitle>{localize('com_ui_delete_conversation')}</OGDialogTitle>
+        <OGDialogTitle>{localize('com_ui_move_to_recycle_bin')}</OGDialogTitle>
       </OGDialogHeader>
       <div id="delete-conversation-description" className="w-full truncate">
         <Trans
-          i18nKey="com_ui_delete_confirm_strong"
+          i18nKey="com_ui_delete_to_recycle_bin_confirm_strong"
           values={{ title }}
           components={{ strong: <strong /> }}
         />
@@ -103,7 +103,7 @@ export function DeleteConversationDialog({
           </Button>
         </OGDialogClose>
         <Button variant="destructive" onClick={confirmDelete} disabled={deleteMutation.isLoading}>
-          {deleteMutation.isLoading ? <Spinner /> : localize('com_ui_delete')}
+          {deleteMutation.isLoading ? <Spinner /> : localize('com_ui_move')}
         </Button>
       </div>
     </OGDialogContent>

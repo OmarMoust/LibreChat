@@ -235,6 +235,7 @@ describe('Convos Routes', () => {
         .send({
           arg: {
             conversationId: mockConversationId,
+            permanent: true,
           },
         });
 
@@ -251,6 +252,37 @@ describe('Convos Routes', () => {
 
       /** Verify deleteConvoSharedLink was called */
       expect(deleteConvoSharedLink).toHaveBeenCalledWith('test-user-123', mockConversationId);
+    });
+
+    it('should soft-delete to recycle bin by default', async () => {
+      const mockConversationId = 'conv-soft-delete';
+      const mockArchivedConvo = {
+        conversationId: mockConversationId,
+        title: 'Soft Deleted Conversation',
+        isArchived: true,
+        user: 'test-user-123',
+      };
+
+      saveConvo.mockResolvedValue(mockArchivedConvo);
+
+      const response = await request(app)
+        .delete('/api/convos')
+        .send({
+          arg: {
+            conversationId: mockConversationId,
+          },
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(mockArchivedConvo);
+      expect(saveConvo).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'test-user-123' }),
+        { conversationId: mockConversationId, isArchived: true },
+        { context: `DELETE /api/convos (soft-delete) ${mockConversationId}` },
+      );
+      expect(deleteConvos).not.toHaveBeenCalled();
+      expect(deleteToolCalls).not.toHaveBeenCalled();
+      expect(deleteConvoSharedLink).not.toHaveBeenCalled();
     });
 
     it('should not call deleteConvoSharedLink when no conversationId provided', async () => {
@@ -284,6 +316,7 @@ describe('Convos Routes', () => {
         .send({
           arg: {
             conversationId: mockConversationId,
+            permanent: true,
           },
         });
 
@@ -348,6 +381,7 @@ describe('Convos Routes', () => {
         .send({
           arg: {
             conversationId: mockConversationId,
+            permanent: true,
           },
         });
 
@@ -379,6 +413,7 @@ describe('Convos Routes', () => {
         .send({
           arg: {
             conversationId: mockConversationId,
+            permanent: true,
           },
         });
 
@@ -400,6 +435,7 @@ describe('Convos Routes', () => {
         .send({
           arg: {
             conversationId: mockConversationId,
+            permanent: true,
           },
         });
 

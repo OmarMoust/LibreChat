@@ -9,7 +9,7 @@ import {
   ArrowDown,
   ArrowUpDown,
   ExternalLink,
-  ArchiveRestore,
+  RotateCcw,
 } from 'lucide-react';
 import {
   Label,
@@ -28,7 +28,7 @@ import type { ConversationListParams, TConversation } from 'librechat-data-provi
 import {
   useConversationsInfiniteQuery,
   useDeleteConversationMutation,
-  useArchiveConvoMutation,
+  useRestoreConvoMutation,
 } from '~/data-provider';
 import { MinimalIcon } from '~/components/Endpoints';
 import { NotificationSeverity } from '~/common';
@@ -37,15 +37,16 @@ import { useLocalize } from '~/hooks';
 import store from '~/store';
 
 const DEFAULT_PARAMS: ConversationListParams = {
-  isArchived: true,
-  sortBy: 'createdAt',
+  isDeleted: true,
+  sortBy: 'updatedAt',
   sortDirection: 'desc',
   search: '',
 };
 
-export default function ArchivedChatsTable({
+export default function RecycleBinTable({
   onOpenChange,
 }: {
+  isOpen?: boolean;
   onOpenChange: (isOpen: boolean) => void;
 }) {
   const localize = useLocalize();
@@ -101,7 +102,7 @@ export default function ArchivedChatsTable({
       });
     },
     onError: (error: unknown) => {
-      logger.error('Error deleting archived conversation:', error);
+      logger.error('Error permanently deleting conversation:', error);
       showToast({
         message: localize('com_ui_convo_permanent_delete_error') as string,
         severity: NotificationSeverity.ERROR,
@@ -109,14 +110,19 @@ export default function ArchivedChatsTable({
     },
   });
 
-  const unarchiveMutation = useArchiveConvoMutation({
+  const restoreMutation = useRestoreConvoMutation({
     onSuccess: async () => {
       await refetch();
+      showToast({
+        message: localize('com_ui_convo_restore_success'),
+        severity: NotificationSeverity.SUCCESS,
+        showIcon: true,
+      });
     },
     onError: (error: unknown) => {
-      logger.error('Error unarchiving conversation', error);
+      logger.error('Error restoring conversation', error);
       showToast({
-        message: localize('com_ui_unarchive_error') as string,
+        message: localize('com_ui_convo_restore_error') as string,
         severity: NotificationSeverity.ERROR,
       });
     },
@@ -180,7 +186,7 @@ export default function ArchivedChatsTable({
                 rel="noopener noreferrer"
                 className="group flex items-center gap-1 truncate rounded-sm text-blue-600 underline decoration-1 underline-offset-2 hover:decoration-2 focus:outline-none focus:ring-2 focus:ring-ring"
                 title={title}
-                aria-label={localize('com_ui_open_archived_chat_new_tab_title', { title })}
+                aria-label={localize('com_ui_open_deleted_chat_new_tab_title', { title })}
               >
                 <span className="truncate">{title}</span>
                 <ExternalLink
@@ -197,7 +203,7 @@ export default function ArchivedChatsTable({
         },
       },
       {
-        accessorKey: 'createdAt',
+        accessorKey: 'updatedAt',
         header: ({ column }) => {
           const sortState = column.getIsSorted();
           let SortIcon = ArrowUpDown;
@@ -222,14 +228,14 @@ export default function ArchivedChatsTable({
                   aria-label={localize('com_ui_date_sort')}
                   aria-current={sortState ? 'true' : 'false'}
                 >
-                  {localize('com_nav_archive_created_at')}
+                  {localize('com_nav_deleted_at')}
                   <SortIcon className="ml-2 h-3 w-4 sm:h-4 sm:w-4" />
                 </Button>
               }
             />
           );
         },
-        cell: ({ row }) => formatDate(row.original.createdAt?.toString() ?? '', isSmallScreen),
+        cell: ({ row }) => formatDate(row.original.updatedAt?.toString() ?? '', isSmallScreen),
         meta: {
           size: isSmallScreen ? '30%' : '35%',
           mobileSize: '30%',
@@ -247,25 +253,24 @@ export default function ArchivedChatsTable({
           return (
             <div className="flex items-center gap-2">
               <TooltipAnchor
-                description={localize('com_ui_unarchive_conversation')}
+                description={localize('com_ui_restore_conversation')}
                 render={
                   <Button
                     variant="ghost"
                     className="h-8 w-8 p-0 hover:bg-surface-hover"
                     onClick={() =>
-                      unarchiveMutation.mutate({
+                      restoreMutation.mutate({
                         conversationId: conversation.conversationId,
-                        isArchived: false,
                       })
                     }
-                    title={localize('com_ui_unarchive_conversation')}
-                    aria-label={localize('com_ui_unarchive_conversation')}
-                    disabled={unarchiveMutation.isLoading}
+                    title={localize('com_ui_restore_conversation')}
+                    aria-label={localize('com_ui_restore_conversation')}
+                    disabled={restoreMutation.isLoading}
                   >
-                    {unarchiveMutation.isLoading ? (
+                    {restoreMutation.isLoading ? (
                       <Spinner />
                     ) : (
-                      <ArchiveRestore className="size-4" />
+                      <RotateCcw className="size-4" />
                     )}
                   </Button>
                 }
@@ -296,7 +301,7 @@ export default function ArchivedChatsTable({
         },
       },
     ],
-    [isSmallScreen, localize, unarchiveMutation],
+    [isSmallScreen, localize, restoreMutation],
   );
 
   return (
