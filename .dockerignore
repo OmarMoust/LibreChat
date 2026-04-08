@@ -5,6 +5,7 @@
 **/.DS_Store
 **/.vscode
 **/node_modules
+**/dist
 
 # Specific patterns to ignore
 data-node
@@ -15,3 +16,6 @@ docs
 
 # Ignore all hidden files
 .*
+
+# Don't ignore client dist (needed for runtime)
+!client/dist
