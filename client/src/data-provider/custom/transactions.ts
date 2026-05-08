@@ -117,4 +117,3 @@ export const transactionsQueryKeys = {
   list: (params?: TransactionsQueryParams) => ['transactions', params] as const,
   summary: (period: string) => ['transactions-summary', period] as const,
 };
-

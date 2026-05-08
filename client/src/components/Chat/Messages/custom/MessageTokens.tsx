@@ -9,7 +9,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Coins } from 'lucide-react';
 import type { TMessage } from 'librechat-data-provider';
-import { useLocalize } from '~/hooks';
 
 // Storage key for token display preference (must match Usage.tsx)
 const TOKEN_DISPLAY_KEY = 'librechat_show_message_tokens';
@@ -67,8 +66,6 @@ function flattenMessages(messages: TMessage[]): TMessage[] {
 }
 
 export default function MessageTokens({ message, messages }: MessageTokensProps) {
-  const localize = useLocalize();
-  
   // Check if token display is enabled
   const [showTokens, setShowTokens] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -82,7 +79,7 @@ export default function MessageTokens({ message, messages }: MessageTokensProps)
     const handleChange = (e: CustomEvent<boolean>) => {
       setShowTokens(e.detail);
     };
-    
+
     window.addEventListener('tokenDisplayChange', handleChange as EventListener);
     return () => {
       window.removeEventListener('tokenDisplayChange', handleChange as EventListener);

@@ -33,14 +33,7 @@ function toObjectId(id) {
 router.get('/', requireJwtAuth, async (req, res) => {
   try {
     const userId = req.user.id;
-    const {
-      limit = 100,
-      offset = 0,
-      startDate,
-      endDate,
-      model,
-      conversationId,
-    } = req.query;
+    const { limit = 100, offset = 0, startDate, endDate, model, conversationId } = req.query;
 
     // Build filter - try both string and ObjectId for user field
     const userObjectId = toObjectId(userId);
@@ -120,7 +113,7 @@ router.get('/summary', requireJwtAuth, async (req, res) => {
 
     // Build filter - try both string and ObjectId for user field
     const userObjectId = toObjectId(userId);
-    
+
     // Build match stage for aggregation
     const matchStage = startDate
       ? {
@@ -254,7 +247,8 @@ router.get('/summary', requireJwtAuth, async (req, res) => {
     };
 
     // Use structured prompt tokens, or fall back to raw if no structured data
-    const promptTokens = rawSummary.promptTokens > 0 ? rawSummary.promptTokens : rawSummary.promptTokensRaw;
+    const promptTokens =
+      rawSummary.promptTokens > 0 ? rawSummary.promptTokens : rawSummary.promptTokensRaw;
     const completionTokens = rawSummary.completionTokens;
     const totalTokens = promptTokens + completionTokens;
 
@@ -280,4 +274,3 @@ router.get('/summary', requireJwtAuth, async (req, res) => {
 });
 
 module.exports = router;
-

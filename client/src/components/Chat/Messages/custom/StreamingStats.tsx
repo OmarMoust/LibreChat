@@ -40,9 +40,13 @@ export default function StreamingStats({
 }: StreamingStatsProps) {
   const localize = useLocalize();
   const [tokensPerSecond, setTokensPerSecond] = useState<number>(0);
-  const [finalStats, setFinalStats] = useState<{ tps: number; totalTokens: number; duration: number } | null>(null);
+  const [finalStats, setFinalStats] = useState<{
+    tps: number;
+    totalTokens: number;
+    duration: number;
+  } | null>(null);
   const [hasStartedStreaming, setHasStartedStreaming] = useState(false);
-  
+
   // Check if token display is enabled
   const [showTokens, setShowTokens] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -56,7 +60,7 @@ export default function StreamingStats({
     const handleChange = (e: CustomEvent<boolean>) => {
       setShowTokens(e.detail);
     };
-    
+
     window.addEventListener('tokenDisplayChange', handleChange as EventListener);
     return () => {
       window.removeEventListener('tokenDisplayChange', handleChange as EventListener);
@@ -138,7 +142,7 @@ export default function StreamingStats({
       startTimeRef.current = null;
       tokenHistoryRef.current = [];
     }
-    
+
     wasSubmittingRef.current = isSubmitting;
   }, [isSubmitting, hasStartedStreaming, text]);
 
@@ -153,7 +157,7 @@ export default function StreamingStats({
       <div className="flex items-center gap-1 text-[10px] text-green-600 dark:text-green-400">
         <Zap className="h-3 w-3 animate-pulse" />
         <span className="font-medium">
-          {tokensPerSecond} tok/s
+          {tokensPerSecond} {localize('com_ui_tokens_per_second')}
         </span>
       </div>
     );
@@ -165,7 +169,7 @@ export default function StreamingStats({
       <div className="flex items-center gap-1 text-[10px] text-text-tertiary">
         <Zap className="h-3 w-3" />
         <span>
-          {finalStats.tps} tok/s
+          {finalStats.tps} {localize('com_ui_tokens_per_second')}
         </span>
       </div>
     );

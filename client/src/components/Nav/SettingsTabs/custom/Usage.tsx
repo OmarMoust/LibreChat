@@ -2,17 +2,8 @@
  * Usage Settings Tab - Shows token usage statistics and transaction history
  * Custom component isolated from core LibreChat for easier upstream merges
  */
-import React, { useState, useMemo, useEffect } from 'react';
-import {
-  BarChart3,
-  Clock,
-  Coins,
-  TrendingUp,
-  ChevronDown,
-  ChevronUp,
-  Eye,
-  EyeOff,
-} from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Clock, Coins, TrendingUp, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 import {
   useGetTransactionsSummary,
   useGetTransactions,
@@ -95,7 +86,10 @@ const ModelBreakdown: React.FC<{
         {data.slice(0, 5).map((model) => (
           <div key={model._id || 'unknown'} className="space-y-0.5">
             <div className="flex items-center justify-between text-[11px]">
-              <span className="truncate font-medium text-text-primary" title={model._id || 'Unknown'}>
+              <span
+                className="truncate font-medium text-text-primary"
+                title={model._id || 'Unknown'}
+              >
                 {model._id || 'Unknown'}
               </span>
               <span className="ml-2 flex-shrink-0 text-text-secondary">
@@ -175,7 +169,10 @@ const TransactionsList: React.FC<{
                       minute: '2-digit',
                     })}
                   </td>
-                  <td className="max-w-[120px] truncate px-2 py-1.5 font-medium text-text-primary" title={tx.model || 'Unknown'}>
+                  <td
+                    className="max-w-[120px] truncate px-2 py-1.5 font-medium text-text-primary"
+                    title={tx.model || 'Unknown'}
+                  >
                     {tx.model || 'Unknown'}
                   </td>
                   <td className="px-2 py-1.5">
@@ -213,7 +210,8 @@ const TransactionsList: React.FC<{
           ) : (
             <>
               <ChevronDown className="h-3 w-3" />
-              {localize('com_ui_usage_show_more')} ({transactions.length - 8} {localize('com_ui_more')})
+              {localize('com_ui_usage_show_more')} ({transactions.length - 8}{' '}
+              {localize('com_ui_more')})
             </>
           )}
         </button>
@@ -242,10 +240,18 @@ const TokenDisplayToggle: React.FC = () => {
   return (
     <div className="mt-4 flex items-center justify-between rounded-lg border border-border-light bg-surface-secondary p-3">
       <div className="flex items-center gap-2">
-        {showTokens ? <Eye className="h-4 w-4 text-text-secondary" /> : <EyeOff className="h-4 w-4 text-text-secondary" />}
+        {showTokens ? (
+          <Eye className="h-4 w-4 text-text-secondary" />
+        ) : (
+          <EyeOff className="h-4 w-4 text-text-secondary" />
+        )}
         <div>
-          <p className="text-xs font-medium text-text-primary">{localize('com_ui_usage_show_tokens')}</p>
-          <p className="text-[10px] text-text-secondary">{localize('com_ui_usage_show_tokens_desc')}</p>
+          <p className="text-xs font-medium text-text-primary">
+            {localize('com_ui_usage_show_tokens')}
+          </p>
+          <p className="text-[10px] text-text-secondary">
+            {localize('com_ui_usage_show_tokens_desc')}
+          </p>
         </div>
       </div>
       <button
@@ -268,7 +274,11 @@ export default function Usage() {
   const localize = useLocalize();
   const [period, setPeriod] = useState<Period>('month');
 
-  const { data: summary, isLoading: summaryLoading, error: summaryError } = useGetTransactionsSummary(period, true);
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    error: summaryError,
+  } = useGetTransactionsSummary(period, true);
   const { data: transactionsData, isLoading: transactionsLoading } = useGetTransactions(
     { limit: 100 },
     true,
@@ -294,7 +304,7 @@ export default function Usage() {
         </div>
       ) : summaryError ? (
         <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
-          Failed to load usage data. Please try again.
+          {localize('com_ui_usage_load_error')}
         </div>
       ) : (
         <>
