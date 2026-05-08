@@ -13,7 +13,7 @@ import MessageIcon from '~/components/Chat/Messages/MessageIcon';
 import { MessageTokens, StreamingStats } from '~/components/Chat/Messages/custom';
 import SubRow from '~/components/Chat/Messages/SubRow';
 import { fontSizeAtom } from '~/store/fontSize';
-import { MessageContext } from '~/Providers';
+import { MessageContext, useMessagesViewContext } from '~/Providers';
 import store from '~/store';
 
 type MessageRenderProps = {
@@ -119,6 +119,8 @@ const MessageRender = memo(function MessageRender({
   });
   const fontSize = useAtomValue(fontSizeAtom);
   const maximizeChatSpace = useRecoilValue(store.maximizeChatSpace);
+  const { getMessages } = useMessagesViewContext();
+  const allMessages = useMemo(() => getMessages?.() || [], [getMessages]);
   const handleRegenerateMessage = useCallback(() => regenerateMessage(), [regenerateMessage]);
   const hasNoChildren = !(msg?.children?.length ?? 0);
   const isLast = useMemo(
@@ -257,7 +259,7 @@ const MessageRender = memo(function MessageRender({
                 handleFeedback={handleFeedback}
                 isLast={isLast}
               />
-              <MessageTokens message={msg} />
+              <MessageTokens message={msg} messages={allMessages} isLast={isLast} />
               {!msg.isCreatedByUser && (
                 <StreamingStats
                   text={msg.text || ''}
