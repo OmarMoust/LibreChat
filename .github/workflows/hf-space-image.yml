@@ -49,5 +49,5 @@ jobs:
           push: true
           provenance: false
           tags: |
-            ghcr.io/${{ env.OWNER_LC }}/librechat:hf-space-latest
-            ghcr.io/${{ env.OWNER_LC }}/librechat:${{ github.sha }}
+            ghcr.io/${{ env.OWNER_LC }}/librechat-hf:hf-space-latest
+            ghcr.io/${{ env.OWNER_LC }}/librechat-hf:${{ github.sha }}
