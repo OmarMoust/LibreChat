@@ -148,7 +148,7 @@ const MessageEndpointIcon: React.FC<IconProps> = (props) => {
       name: 'Claude',
     },
     [EModelEndpoint.bedrock]: {
-      icon: <BedrockIcon className="icon-xl text-white" />,
+      icon: <BedrockIcon className="icon-xl text-black" />,
       bg: '#d09a74',
       name: model ? getBedrockSenderLabel(model) : alternateName[EModelEndpoint.bedrock],
     },
