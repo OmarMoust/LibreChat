@@ -1,136 +1,74 @@
-/**
- * MessageTokens - Displays token count information under each message
- * Custom component isolated from core LibreChat for easier upstream merges
- *
- * Shows:
- * - Single message tokens: tokens for this specific message
- * - Cumulative tokens: total tokens in conversation up to this message
- */
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Coins } from 'lucide-react';
 import type { TMessage } from 'librechat-data-provider';
 
-// Storage key for token display preference (must match Usage.tsx)
 const TOKEN_DISPLAY_KEY = 'librechat_show_message_tokens';
 
 interface MessageTokensProps {
   message: TMessage;
-  messages?: TMessage[];
-}
-
-function estimateTokens(text: string | undefined): number {
-  if (!text) {
-    return 0;
-  }
-  return Math.ceil(text.length / 4);
-}
-
-function getEffectiveTokenCount(message: TMessage): number {
-  const explicitTokenCount = Number(message.tokenCount);
-  if (Number.isFinite(explicitTokenCount) && explicitTokenCount > 0) {
-    return explicitTokenCount;
-  }
-  return estimateTokens(message.text);
 }
 
 /**
- * Calculate cumulative token count up to and including this message
+ * Extract readable text from a message, checking both `text` and `content` fields.
+ * LibreChat stores text in `text` for simple messages and in `content` parts for
+ * structured (multi-part, tool call, thinking) messages.
  */
-function calculateCumulativeTokens(
-  messages: TMessage[] | undefined,
-  currentMessageId: string,
-): number {
-  if (!messages || messages.length === 0) {
-    return 0;
+function extractText(message: TMessage): string {
+  if (message.text && message.text.length > 0) {
+    return message.text;
   }
 
-  let total = 0;
-  const flatMessages = flattenMessages(messages);
-
-  for (const msg of flatMessages) {
-    // Add explicit tokenCount when present, otherwise use a lightweight estimate.
-    total += getEffectiveTokenCount(msg);
-    // Stop when we reach the current message
-    if (msg.messageId === currentMessageId) {
-      break;
-    }
-  }
-
-  return total;
-}
-
-/**
- * Flatten nested message tree into array ordered by conversation flow
- */
-function flattenMessages(messages: TMessage[]): TMessage[] {
-  const result: TMessage[] = [];
-
-  function traverse(msgs: TMessage[]) {
-    for (const msg of msgs) {
-      result.push(msg);
-      if (msg.children && msg.children.length > 0) {
-        traverse(msg.children);
+  if (Array.isArray(message.content)) {
+    const parts: string[] = [];
+    for (const part of message.content) {
+      if (part == null) continue;
+      if (typeof part === 'string') {
+        parts.push(part);
+        continue;
+      }
+      if ('text' in part && typeof part.text === 'string') {
+        parts.push(part.text);
       }
     }
+    return parts.join('');
   }
 
-  traverse(messages);
-  return result;
+  return '';
 }
 
-export default function MessageTokens({ message, messages }: MessageTokensProps) {
-  // Check if token display is enabled
+export default function MessageTokens({ message }: MessageTokensProps) {
   const [showTokens, setShowTokens] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(TOKEN_DISPLAY_KEY) !== 'false';
+    try {
+      return typeof window !== 'undefined'
+        ? localStorage.getItem(TOKEN_DISPLAY_KEY) !== 'false'
+        : true;
+    } catch {
+      return true;
     }
-    return true;
   });
 
-  // Listen for toggle changes from Usage settings
   useEffect(() => {
-    const handleChange = (e: CustomEvent<boolean>) => {
-      setShowTokens(e.detail);
-    };
-
-    window.addEventListener('tokenDisplayChange', handleChange as EventListener);
-    return () => {
-      window.removeEventListener('tokenDisplayChange', handleChange as EventListener);
-    };
+    const handler = (e: Event) => setShowTokens((e as CustomEvent<boolean>).detail);
+    window.addEventListener('tokenDisplayChange', handler);
+    return () => window.removeEventListener('tokenDisplayChange', handler);
   }, []);
 
-  const explicitTokenCount = Number(message.tokenCount);
-  const hasExplicitTokenCount = Number.isFinite(explicitTokenCount) && explicitTokenCount > 0;
-  const messageTokens = getEffectiveTokenCount(message);
+  if (!showTokens) {
+    return null;
+  }
 
-  const cumulativeTokens = useMemo(() => {
-    if (!messages || !message.messageId) {
-      return messageTokens;
-    }
-    return calculateCumulativeTokens(messages, message.messageId);
-  }, [messages, message.messageId, messageTokens]);
+  const explicit = Number(message.tokenCount);
+  const hasExplicit = Number.isFinite(explicit) && explicit > 0;
+  const tokens = hasExplicit ? explicit : Math.ceil(extractText(message).length / 4);
 
-  // Don't show if disabled or no token data
-  if (!showTokens || (!messageTokens && !cumulativeTokens)) {
+  if (tokens <= 0) {
     return null;
   }
 
   return (
-    <div className="flex items-center gap-1 text-[10px] text-text-tertiary">
+    <div className="flex items-center gap-1 self-center text-[11px] text-text-secondary-alt opacity-70">
       <Coins className="h-3 w-3" />
-      <span>
-        {messageTokens > 0 && (
-          <>
-            <span className="font-medium">
-              {hasExplicitTokenCount
-                ? messageTokens.toLocaleString()
-                : `~${messageTokens.toLocaleString()}`}
-            </span>
-            <span className="mx-0.5 opacity-50">/</span>
-          </>
-        )}
-        <span>{cumulativeTokens.toLocaleString()}</span>
-      </span>
+      <span>{hasExplicit ? tokens.toLocaleString() : `~${tokens.toLocaleString()}`}</span>
     </div>
   );
 }
