@@ -18,6 +18,21 @@ interface MessageTokensProps {
   messages?: TMessage[];
 }
 
+function estimateTokens(text: string | undefined): number {
+  if (!text) {
+    return 0;
+  }
+  return Math.ceil(text.length / 4);
+}
+
+function getEffectiveTokenCount(message: TMessage): number {
+  const explicitTokenCount = Number(message.tokenCount);
+  if (Number.isFinite(explicitTokenCount) && explicitTokenCount > 0) {
+    return explicitTokenCount;
+  }
+  return estimateTokens(message.text);
+}
+
 /**
  * Calculate cumulative token count up to and including this message
  */
@@ -33,10 +48,8 @@ function calculateCumulativeTokens(
   const flatMessages = flattenMessages(messages);
 
   for (const msg of flatMessages) {
-    // Add tokens from this message
-    if (msg.tokenCount) {
-      total += msg.tokenCount;
-    }
+    // Add explicit tokenCount when present, otherwise use a lightweight estimate.
+    total += getEffectiveTokenCount(msg);
     // Stop when we reach the current message
     if (msg.messageId === currentMessageId) {
       break;
@@ -86,7 +99,9 @@ export default function MessageTokens({ message, messages }: MessageTokensProps)
     };
   }, []);
 
-  const messageTokens = message.tokenCount || 0;
+  const explicitTokenCount = Number(message.tokenCount);
+  const hasExplicitTokenCount = Number.isFinite(explicitTokenCount) && explicitTokenCount > 0;
+  const messageTokens = getEffectiveTokenCount(message);
 
   const cumulativeTokens = useMemo(() => {
     if (!messages || !message.messageId) {
@@ -106,7 +121,11 @@ export default function MessageTokens({ message, messages }: MessageTokensProps)
       <span>
         {messageTokens > 0 && (
           <>
-            <span className="font-medium">{messageTokens.toLocaleString()}</span>
+            <span className="font-medium">
+              {hasExplicitTokenCount
+                ? messageTokens.toLocaleString()
+                : `~${messageTokens.toLocaleString()}`}
+            </span>
             <span className="mx-0.5 opacity-50">/</span>
           </>
         )}
