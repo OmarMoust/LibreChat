@@ -196,6 +196,63 @@ const extractOmniVersion = (modelStr: string): string => {
   return '';
 };
 
+const toTitleCase = (value: string): string =>
+  value.length ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : value;
+
+/**
+ * Compacts Bedrock Anthropic model IDs for UI display.
+ * Example: `anthropic.claude-opus-4-5-20251101-v1:0` -> `claude-opus-4-5`
+ */
+export const getBedrockModelSlug = (modelStr: string): string => {
+  if (!modelStr) {
+    return '';
+  }
+
+  return modelStr
+    .trim()
+    .replace(/^(?:global|us)\./i, '')
+    .replace(/^anthropic\./i, '')
+    .replace(/-v\d+(?::\d+)?$/i, '')
+    .replace(/-\d{8}$/i, '');
+};
+
+/**
+ * Human-friendly Bedrock Anthropic sender label.
+ * Example: `anthropic.claude-opus-4-5-20251101-v1:0` -> `Claude Opus 4.5`
+ */
+export const getBedrockSenderLabel = (modelStr: string): string => {
+  const slug = getBedrockModelSlug(modelStr);
+  if (!slug) {
+    return '';
+  }
+
+  const providerFirst = slug.match(/^claude-(opus|sonnet|haiku)-(\d+)-(\d+)$/i);
+  if (providerFirst) {
+    const [, family, major, minor] = providerFirst;
+    return `Claude ${toTitleCase(family)} ${major}.${minor}`;
+  }
+
+  const providerFirstMajorOnly = slug.match(/^claude-(opus|sonnet|haiku)-(\d+)$/i);
+  if (providerFirstMajorOnly) {
+    const [, family, major] = providerFirstMajorOnly;
+    return `Claude ${toTitleCase(family)} ${major}`;
+  }
+
+  const versionFirst = slug.match(/^claude-(\d+)-(\d+)-(opus|sonnet|haiku)$/i);
+  if (versionFirst) {
+    const [, major, minor, family] = versionFirst;
+    return `Claude ${toTitleCase(family)} ${major}.${minor}`;
+  }
+
+  const versionFirstMajorOnly = slug.match(/^claude-(\d+)-(opus|sonnet|haiku)$/i);
+  if (versionFirstMajorOnly) {
+    const [, major, family] = versionFirstMajorOnly;
+    return `Claude ${toTitleCase(family)} ${major}`;
+  }
+
+  return slug;
+};
+
 export const getResponseSender = (endpointOption: Partial<t.TEndpointOption>): string => {
   const {
     model: _m,
@@ -212,9 +269,7 @@ export const getResponseSender = (endpointOption: Partial<t.TEndpointOption>): s
   const modelDisplayLabel = _mdl ?? '';
   const chatGptLabel = _cgl ?? '';
   const modelLabel = _ml ?? '';
-  if (
-    [EModelEndpoint.openAI, EModelEndpoint.bedrock, EModelEndpoint.azureOpenAI].includes(endpoint)
-  ) {
+  if ([EModelEndpoint.openAI, EModelEndpoint.azureOpenAI].includes(endpoint)) {
     if (modelLabel) {
       return modelLabel;
     } else if (chatGptLabel) {
@@ -242,7 +297,13 @@ export const getResponseSender = (endpointOption: Partial<t.TEndpointOption>): s
   }
 
   if (endpoint === EModelEndpoint.bedrock) {
-    return modelLabel || alternateName[endpoint];
+    if (modelLabel) {
+      return modelLabel;
+    }
+    if (model) {
+      return getBedrockSenderLabel(model);
+    }
+    return alternateName[endpoint];
   }
 
   if (endpoint === EModelEndpoint.google) {

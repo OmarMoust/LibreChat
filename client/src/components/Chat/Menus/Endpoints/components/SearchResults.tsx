@@ -1,7 +1,12 @@
 import React, { Fragment } from 'react';
 import { VisuallyHidden } from '@ariakit/react';
 import { CheckCircle2, EarthIcon } from 'lucide-react';
-import { isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
+import {
+  EModelEndpoint,
+  getBedrockModelSlug,
+  isAgentsEndpoint,
+  isAssistantsEndpoint,
+} from 'librechat-data-provider';
 import type { TModelSpec } from 'librechat-data-provider';
 import type { Endpoint } from '~/common';
 import { useModelSelectorContext } from '../ModelSelectorContext';
@@ -120,6 +125,8 @@ export function SearchResults({ results, localize, searchValue }: SearchResultsP
                     endpoint.assistantNames[model.name]
                   ) {
                     modelName = endpoint.assistantNames[model.name];
+                  } else if (endpoint.value === EModelEndpoint.bedrock) {
+                    modelName = getBedrockModelSlug(model.name);
                   }
                   return modelName.toLowerCase().includes(lowerQuery);
                 });
@@ -157,6 +164,8 @@ export function SearchResults({ results, localize, searchValue }: SearchResultsP
                     endpoint.assistantNames[modelId]
                   ) {
                     modelName = endpoint.assistantNames[modelId];
+                  } else if (endpoint.value === EModelEndpoint.bedrock) {
+                    modelName = getBedrockModelSlug(modelId);
                   }
 
                   const isModelSelected =

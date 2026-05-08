@@ -1,6 +1,11 @@
 import React from 'react';
 import { Bot } from 'lucide-react';
-import { isAgentsEndpoint, isAssistantsEndpoint } from 'librechat-data-provider';
+import {
+  EModelEndpoint,
+  getBedrockModelSlug,
+  isAgentsEndpoint,
+  isAssistantsEndpoint,
+} from 'librechat-data-provider';
 import type {
   TModelSpec,
   TAgentsMap,
@@ -59,6 +64,10 @@ export function filterItems<
           return false;
         }
 
+        if (item.value === EModelEndpoint.bedrock) {
+          return getBedrockModelSlug(modelId.name).toLowerCase().includes(searchTermLower);
+        }
+
         return false;
       });
     }
@@ -92,6 +101,8 @@ export function filterModels(
       const assistant = assistantsMap[endpoint.value][modelId];
       modelName =
         typeof assistant.name === 'string' && assistant.name ? (assistant.name as string) : modelId;
+    } else if (endpoint.value === EModelEndpoint.bedrock) {
+      modelName = getBedrockModelSlug(modelId);
     }
 
     return modelName.toLowerCase().includes(searchTermLower);
@@ -203,6 +214,10 @@ export const getDisplayValue = ({
       endpoint.assistantNames[selectedValues.model]
     ) {
       return endpoint.assistantNames[selectedValues.model];
+    }
+
+    if (endpoint.value === EModelEndpoint.bedrock) {
+      return getBedrockModelSlug(selectedValues.model);
     }
 
     return selectedValues.model;

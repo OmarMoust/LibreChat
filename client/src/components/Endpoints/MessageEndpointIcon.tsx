@@ -1,6 +1,11 @@
 import { memo } from 'react';
 import { Feather } from 'lucide-react';
-import { EModelEndpoint, isAssistantsEndpoint, alternateName } from 'librechat-data-provider';
+import {
+  EModelEndpoint,
+  isAssistantsEndpoint,
+  alternateName,
+  getBedrockSenderLabel,
+} from 'librechat-data-provider';
 import {
   Plugin,
   GPTIcon,
@@ -144,8 +149,8 @@ const MessageEndpointIcon: React.FC<IconProps> = (props) => {
     },
     [EModelEndpoint.bedrock]: {
       icon: <BedrockIcon className="icon-xl text-white" />,
-      bg: '#268672',
-      name: alternateName[EModelEndpoint.bedrock],
+      bg: '#d09a74',
+      name: model ? getBedrockSenderLabel(model) : alternateName[EModelEndpoint.bedrock],
     },
     [EModelEndpoint.custom]: {
       icon: <CustomMinimalIcon size={size * 0.7} />,
