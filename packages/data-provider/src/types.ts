@@ -235,6 +235,7 @@ export type TUpdateMessageRequest = {
   messageId: string;
   model: string;
   text: string;
+  files?: TMessage['files'];
 };
 
 export type TUpdateMessageContent = {

@@ -1,15 +1,57 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useState, useMemo, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRecoilValue } from 'recoil';
 import { TextareaAutosize, TooltipAnchor } from '@librechat/client';
 import { useUpdateMessageMutation } from 'librechat-data-provider/react-query';
-import type { TEditProps } from '~/common';
+import type { TEditProps, ExtendedFile } from '~/common';
 import { useMessagesOperations, useMessagesConversation } from '~/Providers';
 import { useGetAddedConvo } from '~/hooks/Chat';
 import { cn, removeFocusRings } from '~/utils';
 import { useLocalize } from '~/hooks';
+import AttachFileChat from '~/components/Chat/Input/Files/AttachFileChat';
+import FileRow from '~/components/Chat/Input/Files/FileRow';
 import Container from './Container';
 import store from '~/store';
+
+function toEditFileMap(
+  files: NonNullable<TEditProps['message']['files']> | undefined,
+): Map<string, ExtendedFile> {
+  const map = new Map<string, ExtendedFile>();
+  if (!Array.isArray(files)) {
+    return map;
+  }
+
+  files.forEach((file, idx) => {
+    const key = file.file_id ?? file.filepath ?? `edit-file-${idx}`;
+    if (!key) {
+      return;
+    }
+    map.set(key, {
+      ...file,
+      file_id: file.file_id ?? key,
+      progress: 1,
+      size: file.bytes ?? 0,
+      attached: true,
+    });
+  });
+
+  return map;
+}
+
+function toMessageFiles(files: Map<string, ExtendedFile>) {
+  const mapped = Array.from(files.values())
+    .filter((file) => file.progress >= 1)
+    .map((file) => ({
+      file_id: file.file_id,
+      filepath: file.filepath,
+      filename: file.filename,
+      type: file.type ?? '',
+      height: file.height,
+      width: file.width,
+    }));
+
+  return mapped;
+}
 
 const EditMessage = ({
   text,
@@ -24,6 +66,9 @@ const EditMessage = ({
   const submitButtonRef = useRef<HTMLButtonElement | null>(null);
   const { conversation } = useMessagesConversation();
   const { getMessages, setMessages } = useMessagesOperations();
+  const initialEditFiles = useMemo(() => toEditFileMap(message.files), [message.files]);
+  const [editFiles, setEditFiles] = useState<Map<string, ExtendedFile>>(initialEditFiles);
+  const [filesLoading, setFilesLoading] = useState(false);
 
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -51,8 +96,52 @@ const EditMessage = ({
     }
   }, []);
 
+  useEffect(() => {
+    setEditFiles(initialEditFiles);
+  }, [initialEditFiles, messageId]);
+
+  const applyLocalMessageEdits = useCallback(
+    (updatedText: string, updatedFiles: ReturnType<typeof toMessageFiles>) => {
+      const messages = getMessages();
+      if (!messages) {
+        return;
+      }
+
+      const isInMessages = messages.some((msg) => msg.messageId === messageId);
+      if (!isInMessages) {
+        message.text = updatedText;
+        if (message.isCreatedByUser) {
+          message.files = updatedFiles;
+        }
+        return;
+      }
+
+      setMessages(
+        messages.map((msg) =>
+          msg.messageId === messageId
+            ? {
+                ...msg,
+                text: updatedText,
+                ...(message.isCreatedByUser ? { files: updatedFiles } : {}),
+              }
+            : msg,
+        ),
+      );
+    },
+    [getMessages, message, messageId, setMessages],
+  );
+
   const resubmitMessage = (data: { text: string }) => {
+    const editedFiles = toMessageFiles(editFiles);
     if (message.isCreatedByUser) {
+      updateMessageMutation.mutate({
+        conversationId: conversationId ?? '',
+        model: conversation?.model ?? 'gpt-3.5-turbo',
+        text: data.text,
+        messageId,
+        files: editedFiles,
+      });
+      applyLocalMessageEdits(data.text, editedFiles);
       ask(
         {
           text: data.text,
@@ -60,7 +149,7 @@ const EditMessage = ({
           conversationId,
         },
         {
-          overrideFiles: message.files,
+          overrideFiles: editedFiles,
           /** Pills on the edited user message stay visible after save-and-submit;
            *  carry the picks forward so the new turn primes the same skills
            *  instead of running unprimed. */
@@ -99,32 +188,19 @@ const EditMessage = ({
   };
 
   const updateMessage = (data: { text: string }) => {
-    const messages = getMessages();
-    if (!messages) {
-      return;
-    }
-    updateMessageMutation.mutate({
+    const editedFiles = toMessageFiles(editFiles);
+    const updatedPayload = {
       conversationId: conversationId ?? '',
       model: conversation?.model ?? 'gpt-3.5-turbo',
       text: data.text,
       messageId,
-    });
+      ...(message.isCreatedByUser ? { files: editedFiles } : {}),
+    };
 
-    const isInMessages = messages.some((message) => message.messageId === messageId);
-    if (!isInMessages) {
-      message.text = data.text;
-    } else {
-      setMessages(
-        messages.map((msg) =>
-          msg.messageId === messageId
-            ? {
-                ...msg,
-                text: data.text,
-              }
-            : msg,
-        ),
-      );
-    }
+    updateMessageMutation.mutate({
+      ...updatedPayload,
+    });
+    applyLocalMessageEdits(data.text, editedFiles);
 
     enterEdit(true);
   };
@@ -154,8 +230,33 @@ const EditMessage = ({
     },
   });
 
+  const isUserMessage = message.isCreatedByUser;
+  const messageForContainer = isUserMessage ? { ...message, files: undefined } : message;
+
   return (
-    <Container message={message}>
+    <Container message={messageForContainer}>
+      {isUserMessage && (
+        <>
+          <FileRow
+            files={editFiles}
+            setFiles={setEditFiles}
+            isRTL={isRTL}
+            setFilesLoading={setFilesLoading}
+            Wrapper={({ children }) => (
+              <div className="mx-2 mt-2 flex w-full max-w-full flex-wrap gap-2">{children}</div>
+            )}
+          />
+          <div className="mx-2 -mt-1 mb-1">
+            <AttachFileChat
+              conversation={conversation}
+              disableInputs={isSubmitting}
+              files={editFiles}
+              setFiles={setEditFiles}
+              setFilesLoading={setFilesLoading}
+            />
+          </div>
+        </>
+      )}
       <div className="bg-token-main-surface-primary relative mt-2 flex w-full flex-grow flex-col overflow-hidden rounded-2xl border border-border-medium text-text-primary [&:has(textarea:focus)]:border-border-heavy [&:has(textarea:focus)]:shadow-[0_2px_6px_rgba(0,0,0,.05)]">
         <TextareaAutosize
           {...registerProps}
@@ -184,7 +285,7 @@ const EditMessage = ({
             <button
               ref={submitButtonRef}
               className="btn btn-primary relative mr-2"
-              disabled={isSubmitting}
+              disabled={isSubmitting || filesLoading}
               onClick={handleSubmit(resubmitMessage)}
             >
               {localize('com_ui_save_submit')}
@@ -197,7 +298,7 @@ const EditMessage = ({
             <button
               ref={saveButtonRef}
               className="btn btn-secondary relative mr-2"
-              disabled={isSubmitting}
+              disabled={isSubmitting || filesLoading}
               onClick={handleSubmit(updateMessage)}
             >
               {localize('com_ui_save')}

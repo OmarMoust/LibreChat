@@ -318,11 +318,15 @@ router.get('/:conversationId/:messageId', validateMessageReq, async (req, res) =
 router.put('/:conversationId/:messageId', validateMessageReq, async (req, res) => {
   try {
     const { conversationId, messageId } = req.params;
-    const { text, index, model } = req.body;
+    const { text, index, model, files } = req.body;
 
     if (index === undefined) {
       const tokenCount = await countTokens(text, model);
-      const result = await db.updateMessage(req?.user?.id, { messageId, text, tokenCount });
+      const updatePayload = { messageId, text, tokenCount };
+      if (Array.isArray(files)) {
+        updatePayload.files = files;
+      }
+      const result = await db.updateMessage(req?.user?.id, updatePayload);
       return res.status(200).json(result);
     }
 
