@@ -447,6 +447,16 @@ describe('bedrockInputParser', () => {
       expect(result.system).toBe('Always answer in haiku.');
     });
 
+    test('maps Bedrock system to promptPrefix for downstream prompt handling', () => {
+      const input = {
+        model: 'anthropic.claude-sonnet-4-6',
+        system: 'Respond like a strict reviewer.',
+      };
+      const result = bedrockInputParser.parse(input) as Record<string, unknown>;
+
+      expect(result.promptPrefix).toBe('Respond like a strict reviewer.');
+    });
+
     test('should not add anthropic_beta to Moonshot Kimi K2 models', () => {
       const input = {
         model: 'moonshot.kimi-k2-0711-thinking',

@@ -293,6 +293,23 @@ describe('parseCompactConvo', () => {
       expect(result?.['iconURL']).toBeUndefined();
       expect(result?.model).toBe('gpt-4');
     });
+
+    test('should map Bedrock system setting into promptPrefix', () => {
+      const conversation: Partial<TConversation> = {
+        model: 'anthropic.claude-sonnet-4-6',
+        endpoint: EModelEndpoint.bedrock,
+        system: 'Always respond as a pirate.',
+      };
+
+      const result = parseCompactConvo({
+        endpoint: EModelEndpoint.bedrock,
+        conversation,
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.system).toBe('Always respond as a pirate.');
+      expect(result?.promptPrefix).toBe('Always respond as a pirate.');
+    });
   });
 });
 

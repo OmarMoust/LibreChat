@@ -231,6 +231,26 @@ export const bedrockInputSchema = s.tConversationSchema
     additionalModelRequestFields: true,
   })
   .transform((obj) => {
+    /**
+     * Bedrock-specific "Custom Instructions" may be stored in `system`, while
+     * the rest of LibreChat expects `promptPrefix`. Mirror both fields so
+     * downstream message-formatting paths can still inject system messages.
+     */
+    if (
+      (obj.promptPrefix == null || obj.promptPrefix === '') &&
+      typeof obj.system === 'string' &&
+      obj.system.trim() !== ''
+    ) {
+      obj.promptPrefix = obj.system;
+    }
+    if (
+      (obj.system == null || obj.system === '') &&
+      typeof obj.promptPrefix === 'string' &&
+      obj.promptPrefix.trim() !== ''
+    ) {
+      obj.system = obj.promptPrefix;
+    }
+
     if ((obj as AnthropicInput).additionalModelRequestFields?.thinking != null) {
       const _obj = obj as AnthropicInput;
       const thinking = _obj.additionalModelRequestFields.thinking;
@@ -474,11 +494,14 @@ export const bedrockInputParser = s.tConversationSchema
      * LibreChat "Custom Instructions" are stored in promptPrefix.
      * Bedrock Converse expects this as the top-level `system` field.
      */
-    if (
-      (typedData.system == null || typedData.system === '') &&
-      typeof typedData.promptPrefix === 'string' &&
-      typedData.promptPrefix.trim() !== ''
-    ) {
+    const hasPromptPrefix =
+      typeof typedData.promptPrefix === 'string' && typedData.promptPrefix.trim() !== '';
+    const hasSystem = typeof typedData.system === 'string' && typedData.system.trim() !== '';
+
+    if (!hasPromptPrefix && hasSystem) {
+      typedData.promptPrefix = typedData.system;
+    }
+    if (!hasSystem && hasPromptPrefix) {
       typedData.system = typedData.promptPrefix;
     }
 
