@@ -129,6 +129,18 @@ describe('initializeBedrock', () => {
       expect(amrf.custom_flag).toBe(true);
     });
 
+    it('should map promptPrefix to Bedrock system when system is not provided', async () => {
+      const params = createMockParams({
+        model_parameters: {
+          model: 'anthropic.claude-sonnet-4-6',
+          promptPrefix: 'Use bullet points only',
+        },
+      });
+      const result = (await initializeBedrock(params)) as BedrockLLMConfigResult;
+
+      expect(result.llmConfig.system).toBe('Use bullet points only');
+    });
+
     it('should handle session token when provided', async () => {
       process.env.BEDROCK_AWS_SESSION_TOKEN = 'test-session-token';
       const params = createMockParams();

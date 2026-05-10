@@ -470,6 +470,18 @@ export const bedrockInputParser = s.tConversationSchema
       typedData.maxOutputTokens = typedData.maxTokens;
     }
 
+    /**
+     * LibreChat "Custom Instructions" are stored in promptPrefix.
+     * Bedrock Converse expects this as the top-level `system` field.
+     */
+    if (
+      (typedData.system == null || typedData.system === '') &&
+      typeof typedData.promptPrefix === 'string' &&
+      typedData.promptPrefix.trim() !== ''
+    ) {
+      typedData.system = typedData.promptPrefix;
+    }
+
     return s.removeNullishValues(typedData) as BedrockConverseInput;
   })
   .catch(() => ({}));
