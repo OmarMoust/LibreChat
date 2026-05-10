@@ -294,6 +294,7 @@ export const bedrockInputParser = s.tConversationSchema
       'iconURL',
       'greeting',
       'spec',
+      'system',
       'maxOutputTokens',
       'artifacts',
       'additionalModelRequestFields',
@@ -425,6 +426,12 @@ export const bedrockInputParser = s.tConversationSchema
       typedData.additionalModelRequestFields != null
     ) {
       const amrf = typedData.additionalModelRequestFields as Record<string, unknown>;
+      /**
+       * `system` is a top-level Bedrock Converse field. If it round-trips into
+       * additionalModelRequestFields from older persisted payloads, AWS rejects
+       * the request with "additional field system conflicts with an existing field".
+       */
+      delete amrf.system;
       if (!isAnthropicModel) {
         delete amrf.anthropic_beta;
         delete amrf.thinking;
@@ -536,6 +543,12 @@ export const bedrockOutputParser = (data: Record<string, unknown>) => {
         }
       },
     );
+
+    /**
+     * Defensive cleanup for legacy payloads that persisted `system` in
+     * additionalModelRequestFields. Keep only top-level `system`.
+     */
+    delete (data.additionalModelRequestFields as Record<string, unknown>).system;
   }
 
   // Handle maxTokens and maxOutputTokens

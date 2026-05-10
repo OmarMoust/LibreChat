@@ -110,6 +110,25 @@ describe('initializeBedrock', () => {
       expect(result.llmConfig).toHaveProperty('maxTokens', 4096);
     });
 
+    it('should not duplicate system inside additionalModelRequestFields', async () => {
+      const params = createMockParams({
+        model_parameters: {
+          model: 'anthropic.claude-sonnet-4-6',
+          system: 'Use terse answers',
+          additionalModelRequestFields: {
+            system: 'legacy duplicate',
+            custom_flag: true,
+          },
+        },
+      });
+      const result = (await initializeBedrock(params)) as BedrockLLMConfigResult;
+      const amrf = result.llmConfig.additionalModelRequestFields as Record<string, unknown>;
+
+      expect(result.llmConfig.system).toBe('Use terse answers');
+      expect(amrf.system).toBeUndefined();
+      expect(amrf.custom_flag).toBe(true);
+    });
+
     it('should handle session token when provided', async () => {
       process.env.BEDROCK_AWS_SESSION_TOKEN = 'test-session-token';
       const params = createMockParams();
