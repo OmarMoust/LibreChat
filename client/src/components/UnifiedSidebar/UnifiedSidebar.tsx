@@ -144,7 +144,7 @@ function UnifiedSidebar() {
             width: 'min(85vw, 380px)',
             transition: `transform ${TRANSITION_MS}ms ${EASING}`,
           }}
-          {...(!expanded ? { inert: '' } : {})}
+          aria-hidden={!expanded ? true : undefined}
         >
           <SidebarChatProvider>
             <ActivePanelProvider>
