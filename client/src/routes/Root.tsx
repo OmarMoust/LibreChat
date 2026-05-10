@@ -75,17 +75,6 @@ export default function Root() {
                   <UnifiedSidebar />
                   <div
                     className="relative flex h-full max-w-full flex-1 flex-col overflow-hidden"
-                    style={
-                      isSmallScreen
-                        ? {
-                            transform: sidebarExpanded
-                              ? 'translateX(min(85vw, 380px))'
-                              : 'translateX(0)',
-                            transition: 'transform 300ms cubic-bezier(0.2, 0, 0, 1)',
-                            pointerEvents: sidebarExpanded ? 'none' : 'auto',
-                          }
-                        : undefined
-                    }
                     aria-hidden={isSmallScreen && sidebarExpanded ? true : undefined}
                   >
                     <Outlet />
