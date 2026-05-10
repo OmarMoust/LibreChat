@@ -144,7 +144,7 @@ function UnifiedSidebar() {
             width: 'min(85vw, 380px)',
             transition: `transform ${TRANSITION_MS}ms ${EASING}`,
           }}
-          inert={!expanded ? '' : undefined}
+          {...(!expanded ? { inert: '' } : {})}
         >
           <SidebarChatProvider>
             <ActivePanelProvider>
@@ -155,21 +155,23 @@ function UnifiedSidebar() {
             </ActivePanelProvider>
           </SidebarChatProvider>
         </div>
-        <div
-          className={cn(
-            'fixed inset-0 z-[109] bg-black/50',
-            expanded ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
-          )}
-          style={{ transition: `opacity ${TRANSITION_MS}ms ${EASING}` }}
-          role="presentation"
-        >
-          <button
-            className="h-full w-full"
+        {expanded && (
+          <div
+            className="fixed inset-0 z-[109] bg-black/50"
+            style={{
+              transition: `opacity ${TRANSITION_MS}ms ${EASING}`,
+            }}
+            role="presentation"
             onClick={handleCollapse}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                handleCollapse();
+              }
+            }}
             aria-label={localize('com_nav_close_sidebar')}
-            tabIndex={expanded ? 0 : -1}
+            tabIndex={0}
           />
-        </div>
+        )}
       </>
     );
   }

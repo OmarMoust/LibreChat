@@ -26,14 +26,16 @@ const NewChatButton = memo(function NewChatButton({
 
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLAnchorElement>) => {
-      if (e.button === 0 && !e.ctrlKey && !e.metaKey) {
-        e.preventDefault();
-        clearMessagesCache(queryClient, conversation?.conversationId);
-        queryClient.invalidateQueries([QueryKeys.messages]);
-        newConversation();
-        if (switchToHistory) {
-          setActive(DEFAULT_PANEL);
-        }
+      e.preventDefault();
+      if (e.ctrlKey || e.metaKey) {
+        window.open('/c/new', '_blank');
+        return;
+      }
+      clearMessagesCache(queryClient, conversation?.conversationId);
+      queryClient.invalidateQueries([QueryKeys.messages]);
+      newConversation();
+      if (switchToHistory) {
+        setActive(DEFAULT_PANEL);
       }
     },
     [queryClient, conversation?.conversationId, newConversation, switchToHistory, setActive],
