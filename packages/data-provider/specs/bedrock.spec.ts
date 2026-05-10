@@ -420,6 +420,43 @@ describe('bedrockInputParser', () => {
       expect(result.additionalModelRequestFields).toBeUndefined();
     });
 
+    test('keeps system top-level and removes stale system from AMRF', () => {
+      const input = {
+        model: 'anthropic.claude-sonnet-4-6',
+        system: 'You are concise.',
+        additionalModelRequestFields: {
+          system: 'legacy duplicate',
+          custom_flag: true,
+        },
+      };
+      const result = bedrockInputParser.parse(input) as Record<string, unknown>;
+      const additionalFields = result.additionalModelRequestFields as Record<string, unknown>;
+
+      expect(result.system).toBe('You are concise.');
+      expect(additionalFields.system).toBeUndefined();
+      expect(additionalFields.custom_flag).toBe(true);
+    });
+
+    test('maps promptPrefix to Bedrock system when system is unset', () => {
+      const input = {
+        model: 'anthropic.claude-sonnet-4-6',
+        promptPrefix: 'Always answer in haiku.',
+      };
+      const result = bedrockInputParser.parse(input) as Record<string, unknown>;
+
+      expect(result.system).toBe('Always answer in haiku.');
+    });
+
+    test('maps Bedrock system to promptPrefix for downstream formatting', () => {
+      const input = {
+        model: 'anthropic.claude-sonnet-4-6',
+        system: 'Respond like a strict reviewer.',
+      };
+      const result = bedrockInputParser.parse(input) as Record<string, unknown>;
+
+      expect(result.promptPrefix).toBe('Respond like a strict reviewer.');
+    });
+
     test('should not add anthropic_beta to Moonshot Kimi K2 models', () => {
       const input = {
         model: 'moonshot.kimi-k2-0711-thinking',

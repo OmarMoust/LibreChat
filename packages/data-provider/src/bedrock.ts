@@ -231,6 +231,26 @@ export const bedrockInputSchema = s.tConversationSchema
     additionalModelRequestFields: true,
   })
   .transform((obj) => {
+    /**
+     * Bedrock settings UI may persist Custom Instructions in `system`, while
+     * other LibreChat paths still read `promptPrefix`.
+     * Keep both fields aligned so instructions survive every path.
+     */
+    if (
+      (obj.promptPrefix == null || obj.promptPrefix === '') &&
+      typeof obj.system === 'string' &&
+      obj.system.trim() !== ''
+    ) {
+      obj.promptPrefix = obj.system;
+    }
+    if (
+      (obj.system == null || obj.system === '') &&
+      typeof obj.promptPrefix === 'string' &&
+      obj.promptPrefix.trim() !== ''
+    ) {
+      obj.system = obj.promptPrefix;
+    }
+
     if ((obj as AnthropicInput).additionalModelRequestFields?.thinking != null) {
       const _obj = obj as AnthropicInput;
       const thinking = _obj.additionalModelRequestFields.thinking;
@@ -270,6 +290,7 @@ export const bedrockInputParser = s.tConversationSchema
     maxContextTokens: true,
     /* Bedrock params; optionType: 'model' */
     region: true,
+    system: true,
     model: true,
     maxTokens: true,
     temperature: true,
@@ -294,6 +315,7 @@ export const bedrockInputParser = s.tConversationSchema
       'iconURL',
       'greeting',
       'spec',
+      'system',
       'maxOutputTokens',
       'artifacts',
       'additionalModelRequestFields',
@@ -425,6 +447,12 @@ export const bedrockInputParser = s.tConversationSchema
       typedData.additionalModelRequestFields != null
     ) {
       const amrf = typedData.additionalModelRequestFields as Record<string, unknown>;
+      /**
+       * `system` must remain top-level for Bedrock Converse. If it is present
+       * in additionalModelRequestFields (legacy persisted payload), AWS rejects
+       * the request due to duplicate field conflicts.
+       */
+      delete amrf.system;
       if (!isAnthropicModel) {
         delete amrf.anthropic_beta;
         delete amrf.thinking;
@@ -461,6 +489,17 @@ export const bedrockInputParser = s.tConversationSchema
       typedData.maxTokens = typedData.maxOutputTokens;
     } else if (typedData.maxTokens !== undefined) {
       typedData.maxOutputTokens = typedData.maxTokens;
+    }
+
+    const hasPromptPrefix =
+      typeof typedData.promptPrefix === 'string' && typedData.promptPrefix.trim() !== '';
+    const hasSystem = typeof typedData.system === 'string' && typedData.system.trim() !== '';
+
+    if (!hasPromptPrefix && hasSystem) {
+      typedData.promptPrefix = typedData.system;
+    }
+    if (!hasSystem && hasPromptPrefix) {
+      typedData.system = typedData.promptPrefix;
     }
 
     return s.removeNullishValues(typedData) as BedrockConverseInput;
@@ -536,6 +575,12 @@ export const bedrockOutputParser = (data: Record<string, unknown>) => {
         }
       },
     );
+
+    /**
+     * Defensive cleanup for legacy payloads that persisted `system` under
+     * additionalModelRequestFields.
+     */
+    delete (data.additionalModelRequestFields as Record<string, unknown>).system;
   }
 
   // Handle maxTokens and maxOutputTokens
