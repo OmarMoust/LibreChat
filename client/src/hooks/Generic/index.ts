@@ -1,2 +1,3 @@
 export * from './useLazyEffect';
+export { default as useElementSize } from './useElementSize';
 export { default as useShiftKey } from './useShiftKey';
