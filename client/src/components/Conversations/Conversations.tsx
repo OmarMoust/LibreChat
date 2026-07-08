@@ -397,23 +397,25 @@ const Conversations: FC<ConversationsProps> = ({
         </div>
       ) : (
         <div ref={listContainerRef} className="min-h-0 flex-1 overflow-hidden">
-          <List
-            ref={containerRef}
-            width={listWidth}
-            height={listHeight}
-            deferredMeasurementCache={cache}
-            rowCount={flattenedItems.length}
-            rowHeight={getRowHeight}
-            rowRenderer={rowRenderer}
-            overscanRowCount={10}
-            aria-readonly={false}
-            className="outline-none"
-            aria-label="Conversations"
-            onRowsRendered={handleRowsRendered}
-            tabIndex={-1}
-            style={{ outline: 'none' }}
-            containerRole="rowgroup"
-          />
+          {listWidth > 0 && listHeight > 0 && (
+            <List
+              ref={containerRef}
+              width={listWidth}
+              height={listHeight}
+              deferredMeasurementCache={cache}
+              rowCount={flattenedItems.length}
+              rowHeight={getRowHeight}
+              rowRenderer={rowRenderer}
+              overscanRowCount={10}
+              aria-readonly={false}
+              className="outline-none"
+              aria-label="Conversations"
+              onRowsRendered={handleRowsRendered}
+              tabIndex={-1}
+              style={{ outline: 'none' }}
+              containerRole="rowgroup"
+            />
+          )}
         </div>
       )}
     </div>
